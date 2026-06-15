@@ -1,0 +1,123 @@
+@if (loading()) {
+  <app-spinner [fullPage]="false" size="lg" />
+}
+
+@if (error()) {
+  <div class="bg-danger/10 border border-danger/30 rounded-lg p-4 text-sm text-danger">
+    {{ error() }}
+  </div>
+}
+
+@if (!loading() && !error()) {
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{{ greeting }}, {{ auth.user()?.firstName }}</h1>
+      <p class="page-subtitle">Aquí tienes el resumen de tu negocio</p>
+    </div>
+  </div>
+
+  <!-- ── KPI Cards ───────────────────────────────── -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+
+    @if (canFiscal && data()?.fiscalSummary; as fs) {
+      <div class="kpi-card">
+        <span class="kpi-label">Ingresos del trimestre</span>
+        <span class="kpi-value text-accent">{{ formatCurrency(fs.totalIncome) }}</span>
+        <span class="kpi-sub">T{{ fs.quarter }} · {{ fs.year }}</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Gastos del trimestre</span>
+        <span class="kpi-value text-danger">{{ formatCurrency(fs.totalExpenses) }}</span>
+        <span class="kpi-sub">Deducibles incluidos</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">IVA a ingresar</span>
+        <span class="kpi-value" [class]="fs.vatBalance > 0 ? 'text-danger' : 'text-accent'">
+          {{ formatCurrency(fs.vatBalance) }}
+        </span>
+        <span class="kpi-sub">Modelo 303</span>
+      </div>
+    }
+
+    @if (canInvoices && data()?.pendingInvoices; as pending) {
+      <div class="kpi-card">
+        <span class="kpi-label">Facturas pendientes</span>
+        <span class="kpi-value text-warning">{{ pending.totalElements }}</span>
+        <a routerLink="/facturas" class="kpi-sub kpi-link">Ver todas →</a>
+      </div>
+    }
+
+  </div>
+
+  <!-- ── Segunda fila ────────────────────────────── -->
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+    @if (canInvoices && data()?.recentInvoices; as invoices) {
+      <div class="xl:col-span-2 dashboard-card">
+        <div class="dashboard-card-header">
+          <h3>Últimas facturas</h3>
+          <a routerLink="/facturas" class="dashboard-card-link">Ver todas</a>
+        </div>
+        @if (invoices.content.length === 0) {
+          <p class="text-sm text-text-3 py-6 text-center">No hay facturas aún</p>
+        } @else {
+          <div class="invoice-list">
+            @for (invoice of invoices.content; track invoice.id) {
+              <div class="invoice-row">
+                <div class="invoice-row-left">
+                  <span class="invoice-number">{{ invoice.number }}</span>
+                  <span class="invoice-client">{{ invoice.clientName }}</span>
+                </div>
+                <div class="invoice-row-right">
+                  <span class="invoice-amount">{{ formatCurrency(invoice.total) }}</span>
+                  <app-badge
+                    [label]="invoiceStatusLabel(invoice.status)"
+                    [variant]="invoiceStatusBadge(invoice.status)"
+                    [dot]="true"
+                  />
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    @if (canFiscal && data()?.fiscalSummary; as fs) {
+      <div class="dashboard-card">
+        <div class="dashboard-card-header">
+          <h3>Resumen fiscal</h3>
+          <a routerLink="/fiscal" class="dashboard-card-link">Ver detalle</a>
+        </div>
+        <div class="fiscal-list">
+          <div class="fiscal-row">
+            <span class="fiscal-label">Ingresos netos</span>
+            <span class="fiscal-value text-accent">{{ formatCurrency(fs.netIncome) }}</span>
+          </div>
+          <div class="fiscal-row">
+            <span class="fiscal-label">IVA repercutido</span>
+            <span class="fiscal-value">{{ formatCurrency(fs.totalVatCollected) }}</span>
+          </div>
+          <div class="fiscal-row">
+            <span class="fiscal-label">IVA soportado</span>
+            <span class="fiscal-value">{{ formatCurrency(fs.totalVatPaid) }}</span>
+          </div>
+          <div class="fiscal-row border-t border-border pt-3 mt-1">
+            <span class="fiscal-label font-semibold text-text">Balance IVA</span>
+            <span class="fiscal-value font-semibold"
+              [class]="fs.vatBalance > 0 ? 'text-danger' : 'text-accent'">
+              {{ formatCurrency(fs.vatBalance) }}
+            </span>
+          </div>
+          <div class="fiscal-row">
+            <span class="fiscal-label font-semibold text-text">IRPF estimado</span>
+            <span class="fiscal-value font-semibold text-warning">
+              {{ formatCurrency(fs.irpfBalance) }}
+            </span>
+          </div>
+        </div>
+      </div>
+    }
+
+  </div>
+}

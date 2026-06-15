@@ -1,4 +1,385 @@
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ─── Tema claro (por defecto) ─────────────────── */
+:root {
+  --color-bg:        #f5f5f4;
+  --color-surface:   #ffffff;
+  --color-surface-2: #f0efed;
+  --color-border:    #e8e6e1;
+  --color-border-2:  #d4d1cb;
+
+  --color-primary:       #6366f1;
+  --color-primary-hover: #4f46e5;
+  --color-primary-muted: rgba(99, 102, 241, 0.08);
+
+  --color-accent:        #10b981;
+  --color-accent-hover:  #059669;
+  --color-accent-muted:  rgba(16, 185, 129, 0.08);
+
+  --color-warning:       #f59e0b;
+  --color-warning-muted: rgba(245, 158, 11, 0.1);
+  --color-danger:        #ef4444;
+  --color-danger-muted:  rgba(239, 68, 68, 0.08);
+  --color-info:          #3b82f6;
+  --color-info-muted:    rgba(59, 130, 246, 0.08);
+
+  --color-text:         #1a1917;
+  --color-text-2:       #6b6560;
+  --color-text-3:       #a8a29e;
+  --color-text-inverse: #ffffff;
+
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --sidebar-width:           240px;
+  --sidebar-collapsed-width:  64px;
+  --topbar-height:            56px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.10);
+
+  --transition-fast:   150ms ease;
+  --transition-normal: 250ms ease;
+}
+
+/* ─── Tema oscuro ──────────────────────────────── */
+:root.dark {
+  --color-bg:        #0d0d1b;
+  --color-surface:   #202028;
+  --color-surface-2: #28282f;
+  --color-border:    #323240;
+  --color-border-2:  #424255;
+
+  --color-primary:       #818cf8;
+  --color-primary-hover: #a5b4fc;
+  --color-primary-muted: rgba(129, 140, 248, 0.12);
+
+  --color-accent:        #34d399;
+  --color-accent-hover:  #6ee7b7;
+  --color-accent-muted:  rgba(52, 211, 153, 0.12);
+
+  --color-warning:       #fbbf24;
+  --color-warning-muted: rgba(251, 191, 36, 0.12);
+  --color-danger:        #f87171;
+  --color-danger-muted:  rgba(248, 113, 113, 0.12);
+  --color-info:          #60a5fa;
+  --color-info-muted:    rgba(96, 165, 250, 0.12);
+
+  --color-text:         #f0eeff;
+  --color-text-2:       #9691b0;
+  --color-text-3:       #5c5875;
+  --color-text-inverse: #111113;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
+}
+
+/* ─── Reset ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+a { text-decoration: none; color: inherit; }
+
+/* ─── SVG icons ─────────────────────────────────── */
+[innerHTML] svg, .nav-icon svg, .icon svg {
+  display: block; width: 100%; height: 100%;
+}
+
+/* ═══════════════════════════════════════════════════
+   SISTEMA DE PÁGINA — compartido por todos los módulos
+   Mismos tamaños, mismos espaciados, sin sorpresas
+   ═══════════════════════════════════════════════════ */
+
+/* ── Cabecera de página ──────────────────────────── */
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.page-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.page-subtitle {
+  font-size: 0.75rem;
+  color: var(--color-text-3);
+  margin-top: 5px;
+  letter-spacing: 0.01em;
+}
+
+/* ── Toolbar (búsqueda + acciones) ───────────────── */
+.page-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-3);
+  pointer-events: none;
+  width: 14px;
+  height: 14px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 9px 14px 9px 36px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.search-box input::placeholder {
+  color: var(--color-text-3);
+}
+
+.search-box input:focus {
+  border-color: var(--color-border-2);
+  box-shadow: 0 0 0 3px var(--color-primary-muted);
+}
+
+/* ── Botones primarios/secundarios ───────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text-2);
+  border: 1px solid var(--color-border-2);
+}
+.btn-secondary:hover {
+  border-color: var(--color-text-2);
+  color: var(--color-text);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
+}
+.btn-danger:hover {
+  background: var(--color-danger);
+  color: #fff;
+}
+.btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-3);
+  border: 1px solid transparent;
+  padding: 9px 10px;
+}
+.btn-ghost:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+/* ── Tabla ───────────────────────────────────────── */
+.data-table-wrapper {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead tr {
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.data-table th {
+  padding: 9px 16px;
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 13px 16px;
+  font-size: 0.875rem;
+  color: var(--color-text-2);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr {
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.data-table tbody tr:hover {
+  background: var(--color-surface-2);
+}
+
+/* ── Error banner ────────────────────────────────── */
+.error-banner {
+  background: var(--color-danger-muted);
+  border-left: 3px solid var(--color-danger);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 11px 14px;
+  font-size: 0.875rem;
+  color: var(--color-danger);
+  margin-bottom: 18px;
+}
+
+/* ── Mono ────────────────────────────────────────── */
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.775rem !important;
+}
+
+/* ── Paginación ──────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 20px;
+}
+
+.page-btn {
+  padding: 5px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-3);
+  font-size: 0.8rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.page-btn:hover:not(:disabled) {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+.page-btn.active {
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
+}
+.page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ─── Select nativo — fix dark mode ────────────── */
+select {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  outline: none;
+  cursor: pointer;
+}
+
+select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-muted);
+}
+
+select option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* ─── Select nativo — fix dark mode ─────────────── */
+select {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  outline: none;
+  cursor: pointer;
+}
+
+select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-muted);
+}
+
+select option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* ─── Scrollbar ─────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border-2); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-3); }

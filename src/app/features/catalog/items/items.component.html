@@ -1,0 +1,260 @@
+<app-page-header title="Catálogo de Productos y Servicios" subtitle="Gestiona los productos y servicios disponibles">
+  @if (canCreate()) {
+    <app-button variant="primary" size="sm" (click)="openCreate()">
+      + Nuevo item
+    </app-button>
+  }
+</app-page-header>
+
+<!-- Barra de búsqueda y filtros -->
+<div class="toolbar">
+  <app-input
+    placeholder="Buscar items..."
+    [value]="search()"
+    (valueChange)="onSearch($event)"
+    class="toolbar-search"
+  />
+</div>
+
+<!-- Estado de carga -->
+@if (loading()) {
+  <app-spinner [fullPage]="false" size="lg" />
+}
+
+@if (error()) {
+  <div class="error-banner">{{ error() }}</div>
+}
+
+<!-- Lista de items -->
+@if (!loading() && !error()) {
+  @if (data()?.content?.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="9" cy="21" r="1"/>
+          <circle cx="20" cy="21" r="1"/>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+        </svg>
+      </div>
+      <p class="empty-title">No hay items todavía</p>
+      @if (canCreate()) {
+        <p class="empty-sub">Crea tu primer producto o servicio</p>
+        <app-button variant="primary" size="sm" (click)="openCreate()">Crear item</app-button>
+      }
+    </div>
+  } @else {
+    <div class="items-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Categoría</th>
+            <th>Precio</th>
+            <th>IVA</th>
+            <th>Unidad</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of data()!.content; track item.id) {
+            <tr>
+              <td>{{ item.code || '-' }}</td>
+              <td class="item-name">{{ item.name }}</td>
+              <td>
+                <app-badge
+                  [label]="item.itemType === 'PRODUCT' ? 'Producto' : 'Servicio'"
+                  [variant]="item.itemType === 'PRODUCT' ? 'info' : 'warning'"
+                ></app-badge>
+              </td>
+              <td>{{ getCategoryName(item.categoryId) }}</td>
+              <td class="price">{{ item.unitPrice | currency }}</td>
+              <td>{{ item.taxRate || 0 }}%</td>
+              <td>{{ item.unit || '-' }}</td>
+              <td>
+                @if (item.active) {
+                  <app-badge label="Activo" variant="success"></app-badge>
+                } @else {
+                  <app-badge label="Inactivo" variant="default"></app-badge>
+                }
+              </td>
+              <td class="actions">
+                @if (canEdit()) {
+                  <app-button label="Editar" variant="secondary" size="sm" (click)="openEdit(item)"></app-button>
+                }
+                @if (canDelete()) {
+                  <app-button label="Eliminar" variant="danger" size="sm" (click)="openDelete(item)"></app-button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <!-- Paginación -->
+      @if (data()! && data()!.totalPages > 1) {
+        <div class="pagination">
+          <app-button variant="secondary" size="sm" [disabled]="currentPage() === 0" (click)="prevPage()">
+            ← Anterior
+          </app-button>
+          <span class="pagination-info">
+            Página {{ currentPage() + 1 }} de {{ data()!.totalPages }}
+          </span>
+          <app-button variant="secondary" size="sm" [disabled]="currentPage() === data()!.totalPages - 1" (click)="nextPage()">
+            Siguiente →
+          </app-button>
+        </div>
+      }
+    </div>
+  }
+}
+
+<!-- Modal crear/editar -->
+<app-modal [open]="showModal()" (closed)="closeModal()" [title]="modalMode() === 'create' ? 'Nuevo Item' : 'Editar Item'">
+  @if (modalError()) {
+    <div class="error-banner">{{ modalError() }}</div>
+  }
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="itemType">Tipo *</label>
+      <app-select
+        id="itemType"
+        [value]="fItemType()"
+        (changed)="setItemType($event)"
+        [options]="itemTypeOptions"
+        [disabled]="saving()"
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="code">Código</label>
+      <app-input
+        id="code"
+        placeholder="Código único (opcional)"
+        [value]="fCode()"
+        (changed)="fCode.set($event)"
+        [disabled]="saving()"
+      />
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="name">Nombre *</label>
+    <app-input
+      id="name"
+      placeholder="Nombre del item"
+      [value]="fName()"
+      (changed)="fName.set($event)"
+      [disabled]="saving()"
+    />
+  </div>
+
+  <div class="form-group">
+    <label for="description">Descripción</label>
+    <app-textarea
+      id="description"
+      placeholder="Descripción detallada"
+      [value]="fDescription()"
+      (changed)="fDescription.set($event)"
+      [disabled]="saving()"
+    />
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="unitPrice">Precio Unitario * (€)</label>
+      <app-input
+        id="unitPrice"
+        type="number"
+        placeholder="0.00"
+        [value]="fUnitPrice()"
+        (changed)="fUnitPrice.set($event)"
+        [disabled]="saving()"
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="taxRate">IVA (%)</label>
+      <app-input
+        id="taxRate"
+        type="number"
+        placeholder="0"
+        [value]="fTaxRate()"
+        (changed)="fTaxRate.set($event)"
+        [disabled]="saving()"
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="unit">Unidad</label>
+      <app-input
+        id="unit"
+        placeholder="Ej: kg, ud, h"
+        [value]="fUnit()"
+        (changed)="fUnit.set($event)"
+        [disabled]="saving()"
+      />
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="category">Categoría</label>
+    <app-select
+      id="category"
+      [value]="fCategoryId()"
+      (changed)="fCategoryId.set($event)"
+      [options]="getCategoryOptions()"
+      [disabled]="saving()"
+    />
+  </div>
+
+  @if (modalMode() === 'edit') {
+    <div class="form-group">
+      <label for="active" class="checkbox-label">
+        <input
+          type="checkbox"
+          id="active"
+          [checked]="fActive()"
+          (change)="fActive.set($event.target.checked)"
+          [disabled]="saving()"
+        />
+        <span>Item Activo</span>
+      </label>
+    </div>
+  }
+
+  <div class="modal-actions">
+    <app-button variant="secondary" (click)="closeModal()" [disabled]="saving()">
+      Cancelar
+    </app-button>
+    <app-button variant="primary" (click)="save()" [disabled]="saving() || !fName() || !fUnitPrice()">
+      @if (saving()) {
+        Guardando...
+      } @else {
+        Guardar
+      }
+    </app-button>
+  </div>
+</app-modal>
+
+<!-- Modal eliminar -->
+<app-modal [open]="showDeleteModal()" (closed)="closeDeleteModal()" title="Eliminar Item" variant="danger">
+  <p>¿Estás seguro de que deseas eliminar el item <strong>{{ deleteName() }}</strong>?</p>
+  <p class="text-muted">Esta acción no se puede deshacer.</p>
+
+  <div class="modal-actions">
+    <app-button variant="secondary" (click)="closeDeleteModal()" [disabled]="deleting()">
+      Cancelar
+    </app-button>
+    <app-button variant="danger" (click)="confirmDelete()" [disabled]="deleting()">
+      @if (deleting()) {
+        Eliminando...
+      } @else {
+        Eliminar
+      }
+    </app-button>
+  </div>
+</app-modal>

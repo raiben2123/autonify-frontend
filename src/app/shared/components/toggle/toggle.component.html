@@ -1,0 +1,26 @@
+<label
+  class="flex items-center justify-between gap-4 cursor-pointer"
+  [class.opacity-50]="disabled()"
+  [class.cursor-not-allowed]="disabled()"
+>
+  @if (label()) {
+    <span class="flex flex-col gap-0.5">
+      <span class="text-sm font-medium text-text">{{ label() }}</span>
+      @if (hint()) {
+        <span class="text-xs text-text-3">{{ hint() }}</span>
+      }
+    </span>
+  }
+
+  <span
+    class="relative flex-shrink-0 w-9 h-5 rounded-full transition-colors duration-200"
+    [class]="checked() ? 'bg-primary' : 'bg-border-2'"
+    (click)="toggle()"
+  >
+    <span
+      class="absolute top-0.5 left-0.5 size-4 bg-white rounded-full shadow transition-transform duration-200"
+      [class.translate-x-4]="checked()"
+    >
+    </span>
+  </span>
+</label>

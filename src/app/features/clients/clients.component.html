@@ -1,0 +1,233 @@
+@if (loading() && clients().length === 0) {
+  <app-spinner [fullPage]="false" size="lg" />
+}
+
+@if (error()) {
+  <div class="bg-danger/10 border border-danger/30 rounded-lg p-4 text-sm text-danger">
+    {{ error() }}
+  </div>
+}
+
+@if (!loading() || clients().length > 0) {
+
+  <!-- Cabecera -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Clientes</h1>
+      <p class="page-subtitle">{{ totalElements() }} registro{{ totalElements() !== 1 ? 's' : '' }}</p>
+    </div>
+    <button class="btn btn-primary" (click)="openCreate()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nuevo cliente
+    </button>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="page-toolbar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" [value]="searchQuery()" (input)="onSearch($any($event.target).value)" placeholder="Buscar por nombre, email o NIF…" />
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  @if (clients().length === 0 && !loading()) {
+    <app-empty-state title="Sin clientes aún" subtitle="Añade tu primer cliente para empezar a facturar" />
+  } @else {
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>NIF</th>
+            <th>Teléfono</th>
+            <th>Ciudad</th>
+            <th>Estado</th>
+            <th>Alta</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (client of clients(); track client.id) {
+            <tr (click)="openDetail(client)">
+              <td>
+                <div class="client-cell">
+                  <span class="client-avatar">{{ getInitials(client.name) }}</span>
+                  <div>
+                    <div class="client-name">{{ client.name }}</div>
+                    @if (client.email) { <div class="client-email">{{ client.email }}</div> }
+                  </div>
+                </div>
+              </td>
+              <td class="mono">{{ client.nif || '—' }}</td>
+              <td>{{ client.phone || '—' }}</td>
+              <td>{{ client.city || '—' }}</td>
+              <td><app-badge [label]="client.active ? 'Activo' : 'Inactivo'" [variant]="client.active ? 'success' : 'default'" [dot]="true" /></td>
+              <td class="mono">{{ formatDate(client.createdAt) }}</td>
+              <td (click)="$event.stopPropagation()">
+                <div class="row-actions">
+                  <button class="btn btn-ghost" title="Editar" (click)="openEdit(client)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button class="btn btn-ghost" style="color:var(--color-danger)" title="Eliminar" (click)="openDelete(client)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages() > 1) {
+      <div class="pagination">
+        <button class="page-btn" [disabled]="currentPage() === 0" (click)="goToPage(currentPage() - 1)">←</button>
+        @for (p of pages; track p) {
+          <button class="page-btn" [class.active]="p === currentPage()" (click)="goToPage(p)">{{ p + 1 }}</button>
+        }
+        <button class="page-btn" [disabled]="currentPage() === totalPages() - 1" (click)="goToPage(currentPage() + 1)">→</button>
+      </div>
+    }
+  }
+
+}
+
+<!-- Modal crear/editar -->
+<app-modal [open]="showModal()" [title]="modalTitle()" size="lg" (closed)="closeModal()">
+  @if (modalError()) { <div class="error-banner">{{ modalError() }}</div> }
+
+  <div class="form-grid">
+    <div class="form-field full">
+      <label class="field-label">Nombre comercial *</label>
+      <input class="field-input" placeholder="Empresa o nombre del cliente" [value]="form().name" (input)="patchForm('name', $any($event.target).value)" />
+    </div>
+    <div class="form-field">
+      <label class="field-label">Razón social</label>
+      <input class="field-input" placeholder="Nombre legal" [value]="form().legalName ?? ''" (input)="patchForm('legalName', $any($event.target).value)" />
+    </div>
+    <div class="form-field">
+      <label class="field-label">NIF / CIF</label>
+      <input class="field-input mono" placeholder="B12345678" [value]="form().nif ?? ''" (input)="patchForm('nif', $any($event.target).value)" />
+    </div>
+    <div class="form-field">
+      <label class="field-label">Email</label>
+      <input class="field-input" type="email" placeholder="cliente@empresa.com" [value]="form().email ?? ''" (input)="patchForm('email', $any($event.target).value)" />
+    </div>
+    <div class="form-field">
+      <label class="field-label">Teléfono</label>
+      <input class="field-input" type="tel" placeholder="+34 600 000 000" [value]="form().phone ?? ''" (input)="patchForm('phone', $any($event.target).value)" />
+    </div>
+
+    <div class="form-section-divider">Dirección</div>
+    <div class="form-field full">
+      <label class="field-label">Calle</label>
+      <input class="field-input" placeholder="Calle, número, piso…" [value]="form().address ?? ''" (input)="patchForm('address', $any($event.target).value)" />
+    </div>
+    <div class="form-field">
+      <label class="field-label">Ciudad</label>
+      <input class="field-input" placeholder="Madrid" [value]="form().city ?? ''" (input)="patchForm('city', $any($event.target).value)" />
+    </div>
+    <div class="form-field">
+      <label class="field-label">Código postal</label>
+      <input class="field-input mono" placeholder="28001" [value]="form().postalCode ?? ''" (input)="patchForm('postalCode', $any($event.target).value)" />
+    </div>
+    <div class="form-field">
+      <label class="field-label">Provincia</label>
+      <input class="field-input" placeholder="Madrid" [value]="form().province ?? ''" (input)="patchForm('province', $any($event.target).value)" />
+    </div>
+    <div class="form-field">
+      <label class="field-label">País</label>
+      <input class="field-input mono" placeholder="ES" [value]="form().country ?? 'ES'" (input)="patchForm('country', $any($event.target).value)" />
+    </div>
+
+    <div class="form-section-divider">Contacto</div>
+    <div class="form-field">
+      <label class="field-label">Nombre</label>
+      <input class="field-input" placeholder="Ana García" [value]="form().contactPerson ?? ''" (input)="patchForm('contactPerson', $any($event.target).value)" />
+    </div>
+    <div class="form-field">
+      <label class="field-label">Email</label>
+      <input class="field-input" type="email" placeholder="ana@empresa.com" [value]="form().contactEmail ?? ''" (input)="patchForm('contactEmail', $any($event.target).value)" />
+    </div>
+    <div class="form-field no-bottom">
+      <label class="field-label">Teléfono</label>
+      <input class="field-input" type="tel" [value]="form().contactPhone ?? ''" (input)="patchForm('contactPhone', $any($event.target).value)" />
+    </div>
+    <div class="form-field full no-bottom">
+      <label class="field-label">Notas</label>
+      <textarea class="field-textarea" placeholder="Condiciones, preferencias…" [value]="form().notes ?? ''" (input)="patchForm('notes', $any($event.target).value)"></textarea>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" [disabled]="modalLoading()" (click)="save()">
+      {{ modalLoading() ? 'Guardando…' : (isEditing() ? 'Guardar cambios' : 'Crear cliente') }}
+    </button>
+  </div>
+</app-modal>
+
+<!-- Modal detalle -->
+<app-modal [open]="showDetail()" [title]="detailClient()?.name ?? ''" size="lg" (closed)="closeDetail()">
+  @if (detailClient(); as c) {
+    <div class="detail-header">
+      <span class="detail-avatar">{{ getInitials(c.name) }}</span>
+      <div>
+        <div class="detail-name">{{ c.name }}</div>
+        @if (c.legalName) { <div class="detail-legal">{{ c.legalName }}</div> }
+        <app-badge [label]="c.active ? 'Activo' : 'Inactivo'" [variant]="c.active ? 'success' : 'default'" [dot]="true" />
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-card">
+        <h4>Datos fiscales</h4>
+        <div class="detail-row"><span>NIF / CIF</span><span class="mono">{{ c.nif || '—' }}</span></div>
+        <div class="detail-row"><span>Email</span><span>{{ c.email || '—' }}</span></div>
+        <div class="detail-row"><span>Teléfono</span><span>{{ c.phone || '—' }}</span></div>
+      </div>
+      <div class="detail-card">
+        <h4>Dirección</h4>
+        <div class="detail-row"><span>Calle</span><span>{{ c.address || '—' }}</span></div>
+        <div class="detail-row"><span>Ciudad</span><span>{{ c.city || '—' }}</span></div>
+        <div class="detail-row"><span>CP / Prov.</span><span>{{ c.postalCode || '—' }} {{ c.province || '' }}</span></div>
+        <div class="detail-row"><span>País</span><span>{{ c.country }}</span></div>
+      </div>
+      @if (c.contactPerson || c.contactEmail || c.contactPhone) {
+        <div class="detail-card detail-full">
+          <h4>Persona de contacto</h4>
+          <div class="detail-row"><span>Nombre</span><span>{{ c.contactPerson || '—' }}</span></div>
+          <div class="detail-row"><span>Email</span><span>{{ c.contactEmail || '—' }}</span></div>
+          <div class="detail-row"><span>Teléfono</span><span>{{ c.contactPhone || '—' }}</span></div>
+        </div>
+      }
+      @if (c.notes) {
+        <div class="detail-card detail-full">
+          <h4>Notas</h4>
+          <p class="detail-notes">{{ c.notes }}</p>
+        </div>
+      }
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-danger" (click)="openDelete(c)">Eliminar</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-secondary" (click)="closeDetail()">Cerrar</button>
+      <button class="btn btn-primary" (click)="openEdit(c)">Editar</button>
+    </div>
+  }
+</app-modal>
+
+<!-- Modal borrar -->
+<app-modal [open]="showDeleteModal()" title="Eliminar cliente" size="sm" (closed)="closeDelete()">
+  <p style="font-size:0.875rem;color:var(--color-text-2);margin-bottom:4px">Estás a punto de eliminar permanentemente a</p>
+  <p style="font-size:1rem;font-weight:700;color:var(--color-text);margin-bottom:16px;letter-spacing:-0.01em">{{ deletingClient()?.name }}</p>
+  <p style="font-size:0.8125rem;color:var(--color-text-3)">Esta acción no se puede deshacer.</p>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="closeDelete()">Cancelar</button>
+    <button class="btn btn-danger" [disabled]="deleteLoading()" (click)="confirmDelete()">
+      {{ deleteLoading() ? 'Eliminando…' : 'Sí, eliminar' }}
+    </button>
+  </div>
+</app-modal>

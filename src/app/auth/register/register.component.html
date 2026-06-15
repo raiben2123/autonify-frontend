@@ -1,0 +1,99 @@
+<div class="min-h-screen bg-app-bg flex items-center justify-center p-4">
+  <div class="w-full max-w-sm">
+    <!-- Logo -->
+    <div class="flex items-center gap-3 mb-8">
+      <div class="flex items-center justify-center w-9 h-9 bg-primary rounded-lg shadow-glow">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="white"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+        </svg>
+      </div>
+      <span class="text-lg font-bold text-text tracking-tight">Autonify</span>
+    </div>
+
+    <!-- Tarjeta -->
+    <div class="bg-surface border border-border rounded-xl p-8">
+      <h1 class="text-xl font-semibold text-text mb-1">Crear cuenta</h1>
+      <p class="text-sm text-text-2 mb-6">Plan Free · Sin tarjeta de crédito</p>
+
+      <div class="flex flex-col gap-4">
+        <div class="grid grid-cols-2 gap-3">
+          <app-input
+            label="Nombre"
+            placeholder="Juan"
+            [required]="true"
+            [value]="firstName()"
+            (changed)="firstName.set($event.toString())"
+          />
+          <app-input
+            label="Apellidos"
+            placeholder="García"
+            [required]="true"
+            [value]="lastName()"
+            (changed)="lastName.set($event.toString())"
+          />
+        </div>
+
+        <app-input
+          label="Nombre de tu negocio"
+          placeholder="Freelance García"
+          [required]="true"
+          [value]="tenantName()"
+          (changed)="tenantName.set($event.toString())"
+        />
+
+        <app-input
+          label="NIF / CIF"
+          placeholder="12345678A"
+          [value]="nif()"
+          hint="Podrás añadirlo más tarde"
+          (changed)="nif.set($event.toString())"
+        />
+
+        <app-input
+          label="Correo electrónico"
+          type="email"
+          placeholder="tu@empresa.es"
+          [required]="true"
+          [value]="email()"
+          (changed)="email.set($event.toString())"
+        />
+
+        <app-input
+          label="Contraseña"
+          type="password"
+          placeholder="Mínimo 8 caracteres"
+          [required]="true"
+          [value]="password()"
+          (changed)="password.set($event.toString())"
+          (entered)="onSubmit()"
+        />
+
+        @if (error()) {
+          <p class="text-sm text-danger">{{ error() }}</p>
+        }
+
+        <app-button
+          label="Crear cuenta gratis"
+          [fullWidth]="true"
+          [loading]="loading()"
+          (clicked)="onSubmit()"
+        />
+
+        <p class="text-center text-xs text-text-3">
+          ¿Ya tienes cuenta?
+          <a routerLink="/auth/login" class="text-primary hover:underline cursor-pointer">Inicia sesión</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

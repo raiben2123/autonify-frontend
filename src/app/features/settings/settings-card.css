@@ -1,0 +1,136 @@
+/* ════════════════════════════════════════════════════
+   Settings card — base compartida para todos los tabs
+   ════════════════════════════════════════════════════ */
+
+/* ── Card contenedor ─────────────────────────────── */
+:host {
+  display: block;
+}
+
+.settings-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+/* ── Card header ─────────────────────────────────── */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.card-title {
+  font-size: 0.9375rem;
+  font-weight: 650;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.card-desc {
+  font-size: 0.8125rem;
+  color: var(--color-text-2);
+  margin-top: 2px;
+}
+
+/* ── Secciones internas ──────────────────────────── */
+.card-section {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 24px;
+  padding: 20px 24px;
+  align-items: start;
+}
+
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-top: 6px;
+}
+
+.section-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* ── Divider entre secciones ─────────────────────── */
+.card-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 0 24px;
+}
+
+/* ── Footer del card (botón guardar) ─────────────── */
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+}
+
+/* ── Mensajes ────────────────────────────────────── */
+.success-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-accent);
+}
+
+.error-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-danger);
+}
+
+/* ── Skeleton loading ────────────────────────────── */
+.card-loading {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton {
+  height: 14px;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-md);
+  animation: shimmer 1.4s infinite;
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-2) 25%,
+    var(--color-border) 50%,
+    var(--color-surface-2) 75%
+  );
+  background-size: 200% 100%;
+}
+
+.skeleton.short {
+  width: 40%;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

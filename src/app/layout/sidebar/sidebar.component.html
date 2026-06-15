@@ -1,0 +1,63 @@
+<div class="app-shell">
+
+  <!-- ── Sidebar expansible ────────────────────── -->
+  <aside class="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </div>
+      <span class="logo-text">Autonify</span>
+    </div>
+
+    <!-- Navegación -->
+    <nav class="sidebar-nav">
+      @for (group of nav; track group.label) {
+        @if (group.items | visibleItems) {
+          <div class="nav-group">
+            <span class="nav-group-label">{{ group.label }}</span>
+            @for (item of group.items; track item.route) {
+              @if (permissions.canAccess(item.module)) {
+                <a [routerLink]="item.route" routerLinkActive="active" class="nav-item" [title]="item.label">
+                  <span class="nav-icon" [innerHTML]="item.icon | safeHtml"></span>
+                  <span class="nav-label">{{ item.label }}</span>
+                </a>
+              }
+            }
+          </div>
+        }
+      }
+    </nav>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+      @if (permissions.canAccess('ajustes')) {
+        <a routerLink="/ajustes" routerLinkActive="active" class="nav-item" title="Configuración">
+          <span class="nav-icon" [innerHTML]="icons.settings | safeHtml"></span>
+          <span class="nav-label">Configuración</span>
+        </a>
+      }
+      <button class="nav-item danger" (click)="auth.logout()" title="Cerrar sesión">
+        <span class="nav-icon" [innerHTML]="icons.logout | safeHtml"></span>
+        <span class="nav-label">Cerrar sesión</span>
+      </button>
+      <div class="sidebar-user">
+        <div class="user-avatar">{{ initials }}</div>
+        <div class="user-info">
+          <span class="user-name">{{ auth.fullName() }}</span>
+          <span class="user-role">{{ auth.user()?.role | roleLabel }}</span>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── Contenido ─────────────────────────────── -->
+  <main class="app-main">
+    <router-outlet />
+  </main>
+
+</div>

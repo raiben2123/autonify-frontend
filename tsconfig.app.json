@@ -8,7 +8,7 @@
   },
   "include": [
     "src/**/*.ts"
-  ],
+, "src/app/shared/components/checkbox"  ],
   "exclude": [
     "src/**/*.spec.ts"
   ]

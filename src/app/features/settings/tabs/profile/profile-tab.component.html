@@ -1,0 +1,77 @@
+<div class="settings-card">
+
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Perfil</h2>
+      <p class="card-desc">Tu información personal y de contacto</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="card-loading">
+      <div class="skeleton"></div>
+      <div class="skeleton short"></div>
+      <div class="skeleton"></div>
+    </div>
+  } @else {
+
+    <!-- Sección: Personal -->
+    <div class="card-section">
+      <div class="section-label">Personal</div>
+      <div class="section-fields">
+        <div class="field-row">
+          <app-input label="Nombre" [value]="firstName()" (valueChange)="firstName.set($event)" />
+          <app-input label="Apellidos" [value]="lastName()" (valueChange)="lastName.set($event)" />
+        </div>
+        <app-input
+          label="Cargo"
+          [value]="jobTitle()"
+          (valueChange)="jobTitle.set($event)"
+          placeholder="CEO, Desarrollador, Diseñador…"
+        />
+      </div>
+    </div>
+
+    <div class="card-divider"></div>
+
+    <!-- Sección: Cuenta -->
+    <div class="card-section">
+      <div class="section-label">Cuenta</div>
+      <div class="section-fields">
+        <app-input
+          label="Email"
+          [value]="email()"
+          [disabled]="true"
+          hint="El email no puede modificarse desde aquí"
+        />
+      </div>
+    </div>
+
+    <div class="card-divider"></div>
+
+    <!-- Sección: Contacto -->
+    <div class="card-section">
+      <div class="section-label">Contacto</div>
+      <div class="section-fields">
+        <app-input
+          label="Teléfono"
+          [value]="phone()"
+          (valueChange)="phone.set($event)"
+          type="tel"
+          placeholder="600 000 000"
+        />
+      </div>
+    </div>
+
+    <div class="card-footer">
+      @if (success()) {
+        <span class="success-msg">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Guardado correctamente
+        </span>
+      }
+      <app-button label="Guardar cambios" variant="primary" size="sm" [loading]="saving()" (clicked)="save()" />
+    </div>
+
+  }
+</div>

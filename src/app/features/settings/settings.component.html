@@ -1,0 +1,43 @@
+<div class="settings-layout">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Configuración</h1>
+      <p class="page-subtitle">Gestiona tu cuenta, seguridad y equipo</p>
+    </div>
+  </div>
+
+  <div class="settings-body">
+
+    <!-- Nav ancla lateral sticky -->
+    <nav class="settings-nav">
+      @for (s of sections; track s.fragment) {
+        <button
+          class="nav-link"
+          [class.active]="activeSection() === s.fragment"
+          (click)="scrollTo(s.fragment)"
+        >
+          <span class="nav-dot"></span>
+          {{ s.label }}
+        </button>
+      }
+    </nav>
+
+    <!-- Contenido: scroll continuo -->
+    <div class="settings-content">
+      <section id="perfil">
+        <app-profile-tab />
+      </section>
+      <section id="seguridad">
+        <app-security-tab />
+      </section>
+      <section id="preferencias">
+        <app-preferences-tab />
+      </section>
+      <section id="equipo">
+        <app-team-tab />
+      </section>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,64 @@
+<div class="min-h-screen bg-app-bg flex items-center justify-center p-4">
+  <div class="w-full max-w-sm">
+    <!-- Logo -->
+    <div class="flex items-center gap-3 mb-8">
+      <div class="flex items-center justify-center w-9 h-9 bg-primary rounded-lg shadow-glow">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="white"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+        </svg>
+      </div>
+      <span class="text-lg font-bold text-text tracking-tight">Autonify</span>
+    </div>
+
+    <!-- Tarjeta -->
+    <div class="bg-surface border border-border rounded-xl p-8">
+      <h1 class="text-xl font-semibold text-text mb-1">Bienvenido</h1>
+      <p class="text-sm text-text-2 mb-6">Inicia sesión en tu cuenta</p>
+
+      <div class="flex flex-col gap-4">
+        <app-input
+          label="Correo electrónico"
+          type="email"
+          placeholder="tu@empresa.es"
+          [value]="email()"
+          (changed)="email.set($event.toString())"
+        />
+
+        <app-input
+          label="Contraseña"
+          type="password"
+          placeholder="••••••••"
+          [value]="password()"
+          (changed)="password.set($event.toString())"
+          (entered)="onSubmit()"
+        />
+
+        @if (error()) {
+          <p class="text-sm text-danger">{{ error() }}</p>
+        }
+
+        <app-button
+          label="Iniciar sesión"
+          type="submit"
+          [fullWidth]="true"
+          [loading]="loading()"
+          (clicked)="onSubmit()"
+        />
+        <p class="text-center text-xs text-text-3 mt-2">
+          ¿No tienes cuenta?
+          <a routerLink="/auth/register" class="text-primary hover:underline cursor-pointer">Regístrate gratis</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

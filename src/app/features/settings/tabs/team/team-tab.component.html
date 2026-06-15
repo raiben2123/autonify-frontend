@@ -1,0 +1,595 @@
+<div class="settings-card" (click)="closeRoleMenu()">
+
+  <!-- ── Header ─────────────────────────────────────── -->
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Equipo y configuracion</h2>
+      <p class="card-desc">Usuarios, roles, equipos y series de documentos</p>
+    </div>
+    <div class="subtab-group">
+      <button class="tab-pill" [class.active]="subTab() === 'users'"  (click)="onSubTabChange('users')">Usuarios</button>
+      <button class="tab-pill" [class.active]="subTab() === 'roles'"  (click)="onSubTabChange('roles')">Roles</button>
+      <button class="tab-pill" [class.active]="subTab() === 'teams'"  (click)="onSubTabChange('teams')">Equipos</button>
+      <button class="tab-pill" [class.active]="subTab() === 'series'" (click)="onSubTabChange('series')">Series</button>
+    </div>
+  </div>
+
+
+  <!-- ══════════ USUARIOS ══════════ -->
+  @if (subTab() === 'users') {
+
+    <div class="table-toolbar">
+      <span class="table-count">{{ members().length }} usuario{{ members().length !== 1 ? 's' : '' }}</span>
+      <app-button label="Anadir usuario" variant="primary" size="sm" (clicked)="openUserModal()" />
+    </div>
+
+    @if (userSuccess()) {
+      <div class="banner-success">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Usuario creado correctamente
+      </div>
+    }
+
+    @if (loadingMembers()) {
+      <div class="table-loading">
+        @for (i of [1,2,3]; track i) {
+          <div class="skeleton-row">
+            <div class="skeleton avatar-skel"></div>
+            <div class="skeleton-lines"><div class="skeleton"></div><div class="skeleton short"></div></div>
+          </div>
+        }
+      </div>
+    } @else if (members().length === 0) {
+      <div class="table-empty">No hay usuarios en tu equipo</div>
+    } @else {
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th>Ultimo acceso</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (member of members(); track member.id) {
+              <tr [class.inactive-row]="!member.active">
+                <td>
+                  <div class="user-cell">
+                    <div class="user-avatar">{{ (member.fullName || member.email)[0].toUpperCase() }}</div>
+                    <div class="user-info">
+                      <span class="user-name">
+                        {{ member.fullName || '—' }}
+                        @if (member.id === currentUserId()) { <span class="own-badge">Tu</span> }
+                      </span>
+                      <span class="user-email">{{ member.email }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="role-dropdown-wrap" (click)="$event.stopPropagation()">
+                    <button
+                      class="role-chip"
+                      [class.disabled]="isProtected(member)"
+                      [disabled]="isProtected(member)"
+                      (click)="toggleRoleMenu(member.id, $event)"
+                    >
+                      {{ getMemberRoleName(member) }}
+                      @if (!isProtected(member)) {
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                      }
+                    </button>
+                    @if (openRoleMenuFor() === member.id) {
+                      <div class="role-menu">
+                        @for (r of roles(); track r.id) {
+                          <button
+                            class="role-menu-item"
+                            [class.selected]="r.id === getMemberRoleId(member)"
+                            (click)="selectRole(member, r.id)"
+                          >
+                            <span class="role-menu-name">{{ r.name }}</span>
+                            @if (r.id === getMemberRoleId(member)) {
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            }
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                </td>
+                <td>
+                  @if (member.active) { <span class="status-badge active">Activo</span> }
+                  @else { <span class="status-badge inactive">Inactivo</span> }
+                </td>
+                <td class="meta-cell">{{ member.lastLoginAt ? (member.lastLoginAt | date:'dd/MM/yy') : 'Nunca' }}</td>
+                <td>
+                  @if (!isProtected(member)) {
+                    <div class="row-actions">
+                      @if (member.active) { <button class="row-btn" (click)="deactivateUser(member.id)">Desactivar</button> }
+                      @else { <button class="row-btn accent" (click)="activateUser(member.id)">Activar</button> }
+                      <button class="row-btn danger" (click)="deleteUser(member.id)">Eliminar</button>
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+
+  <!-- ══════════ ROLES ══════════ -->
+  @if (subTab() === 'roles') {
+
+    <div class="table-toolbar">
+      <span class="table-count">{{ roles().length }} rol{{ roles().length !== 1 ? 'es' : '' }}</span>
+      <app-button label="Nuevo rol" variant="primary" size="sm" (clicked)="openRoleCreate()" />
+    </div>
+
+    @if (roleSuccess()) {
+      <div class="banner-success">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Rol guardado correctamente
+      </div>
+    }
+
+    @if (loadingRoles()) {
+      <div class="table-loading">
+        @for (i of [1,2,3]; track i) {
+          <div class="skeleton-row">
+            <div class="skeleton-lines"><div class="skeleton"></div><div class="skeleton short"></div></div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Descripcion</th>
+              <th>Tipo</th>
+              <th>Permisos activos</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (role of roles(); track role.id) {
+              <tr>
+                <td><span class="role-name">{{ role.name }}</span></td>
+                <td class="meta-cell">{{ role.description || '—' }}</td>
+                <td>
+                  @if (role.isSystem) { <span class="status-badge system">Sistema</span> }
+                  @else { <span class="status-badge custom">Personalizado</span> }
+                </td>
+                <td>
+                  @if (role.permissions && role.permissions.length > 0) {
+                    <div class="perm-chips">
+                      @for (p of role.permissions.slice(0, 4); track p.module) {
+                        <span class="perm-chip">{{ moduleLabel(p.module) }}</span>
+                      }
+                      @if (role.permissions.length > 4) {
+                        <span class="perm-chip more">+{{ role.permissions.length - 4 }}</span>
+                      }
+                    </div>
+                  } @else {
+                    <span class="meta-cell">—</span>
+                  }
+                </td>
+                <td>
+                  @if (!role.isSystem) {
+                    <div class="row-actions">
+                      <button class="row-btn" (click)="openRoleEdit(role)">Editar</button>
+                      <button class="row-btn danger" (click)="deleteRole(role.id)">Eliminar</button>
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+
+  <!-- ══════════ EQUIPOS ══════════ -->
+  @if (subTab() === 'teams') {
+
+    <div class="teams-layout">
+
+      <!-- Lista de equipos (columna izquierda) -->
+      <div class="teams-list-col">
+        <div class="teams-list-header">
+          <span class="table-count">{{ teams().length }} equipo{{ teams().length !== 1 ? 's' : '' }}</span>
+          <button class="btn-icon" title="Nuevo equipo" (click)="openTeamCreate()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+
+        @if (loadingTeams()) {
+          <div class="teams-list-skeleton">
+            @for (i of [1,2,3]; track i) {
+              <div class="skeleton-row" style="padding: 12px 16px;">
+                <div class="skeleton-lines"><div class="skeleton"></div><div class="skeleton short"></div></div>
+              </div>
+            }
+          </div>
+        } @else if (teams().length === 0) {
+          <div class="teams-empty">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <p>No hay equipos</p>
+            <button class="row-btn accent" (click)="openTeamCreate()">Crear el primero</button>
+          </div>
+        } @else {
+          <div class="teams-list">
+            @for (team of teams(); track team.id) {
+              <div
+                class="team-item"
+                [class.selected]="selectedTeam()?.id === team.id"
+                (click)="selectTeam(team)"
+              >
+                <div class="team-item-avatar">{{ team.name[0].toUpperCase() }}</div>
+                <div class="team-item-info">
+                  <span class="team-item-name">{{ team.name }}</span>
+                  @if (team.description) {
+                    <span class="team-item-desc">{{ team.description }}</span>
+                  }
+                </div>
+                @if (!team.active) {
+                  <span class="status-badge inactive" style="font-size:0.6rem">Inactivo</span>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Panel del equipo seleccionado (columna derecha) -->
+      <div class="team-detail-col">
+        @if (!selectedTeam()) {
+          <div class="team-detail-empty">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <p>Selecciona un equipo para ver sus miembros</p>
+          </div>
+        } @else {
+          <!-- Header del equipo -->
+          <div class="team-detail-header">
+            <div>
+              <h3 class="team-detail-name">{{ selectedTeam()!.name }}</h3>
+              @if (selectedTeam()!.description) {
+                <p class="team-detail-desc">{{ selectedTeam()!.description }}</p>
+              }
+            </div>
+            <div class="row-actions">
+              <button class="row-btn" (click)="openTeamEdit(selectedTeam()!)">Editar</button>
+              <button class="row-btn danger" (click)="deleteTeam(selectedTeam()!.id)">Eliminar</button>
+            </div>
+          </div>
+
+          <!-- Añadir miembro -->
+          <div class="add-member-row">
+            <div class="add-member-selects">
+              <app-select
+                label=""
+                [options]="availableForTeam()"
+                [value]="selectedTeamMemberId()"
+                (valueChange)="selectedTeamMemberId.set($event)"
+                placeholder="Seleccionar usuario..."
+              />
+              <app-select
+                label=""
+                [options]="teamRoleOptions"
+                [value]="selectedTeamRole()"
+                (valueChange)="selectedTeamRole.set($any($event))"
+              />
+            </div>
+            <app-button
+              label="Anadir"
+              variant="secondary"
+              size="sm"
+              [loading]="addingTeamMember()"
+              [disabled]="!selectedTeamMemberId()"
+              (clicked)="addTeamMember()"
+            />
+          </div>
+
+          <!-- Lista de miembros -->
+          @if (loadingTeamMembers()) {
+            <div class="table-loading" style="padding: 0 0">
+              @for (i of [1,2]; track i) {
+                <div class="skeleton-row">
+                  <div class="skeleton avatar-skel"></div>
+                  <div class="skeleton-lines"><div class="skeleton"></div><div class="skeleton short"></div></div>
+                </div>
+              }
+            </div>
+          } @else if (teamMembers().length === 0) {
+            <div class="team-members-empty">Este equipo no tiene miembros aun</div>
+          } @else {
+            <div class="team-members-list">
+              @for (m of teamMembers(); track m.id) {
+                <div class="team-member-row">
+                  <div class="user-avatar" style="width:28px;height:28px;font-size:0.7rem">
+                    {{ getTeamMemberInitials(m.userName) }}
+                  </div>
+                  <div class="user-info">
+                    <span class="user-name" style="font-size:0.8125rem">{{ m.userName }}</span>
+                    <span class="user-email">{{ m.userEmail }}</span>
+                  </div>
+                  <span class="status-badge" [class.system]="m.role === 'LEADER'" [class.custom]="m.role === 'MEMBER'">
+                    {{ m.role === 'LEADER' ? 'Lider' : 'Miembro' }}
+                  </span>
+                  <button class="row-btn danger" style="margin-left:auto" (click)="removeTeamMember(m.userId)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+
+    </div>
+  }
+
+
+  <!-- ══════════ SERIES ══════════ -->
+  @if (subTab() === 'series') {
+
+    <div class="table-toolbar">
+      <div>
+        <span class="table-count">{{ series().length }} serie{{ series().length !== 1 ? 's' : '' }}</span>
+        <span class="table-hint">Prefijos de numeracion para presupuestos (ej: PRE-0001)</span>
+      </div>
+      <app-button label="Nueva serie" variant="primary" size="sm" (clicked)="openSeriesCreate()" />
+    </div>
+
+    @if (seriesSuccess()) {
+      <div class="banner-success">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Serie creada correctamente
+      </div>
+    }
+
+    @if (loadingSeries()) {
+      <div class="table-loading">
+        @for (i of [1,2]; track i) {
+          <div class="skeleton-row">
+            <div class="skeleton-lines"><div class="skeleton"></div><div class="skeleton short"></div></div>
+          </div>
+        }
+      </div>
+    } @else if (series().length === 0) {
+      <div class="table-empty">No hay series personalizadas. Se usara la numeracion por defecto.</div>
+    } @else {
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Prefijo</th>
+              <th>Siguiente num.</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of series(); track s.id) {
+              <tr>
+                <td>
+                  <span class="role-name">{{ s.name }}</span>
+                  @if (s.defaultSeries) { <span class="own-badge" style="margin-left:8px">Defecto</span> }
+                </td>
+                <td><span class="mono-chip">{{ s.prefix }}</span></td>
+                <td class="meta-cell" style="font-family:var(--font-mono);font-size:0.8rem">{{ s.nextNumber }}</td>
+                <td>
+                  @if (s.active) { <span class="status-badge active">Activa</span> }
+                  @else { <span class="status-badge inactive">Inactiva</span> }
+                </td>
+                <td>
+                  <div class="row-actions">
+                    @if (!s.defaultSeries) {
+                      <button class="row-btn accent" (click)="setDefaultSeries(s.id)">Predeterminar</button>
+                    }
+                    <button class="row-btn danger" (click)="deleteSeries(s.id)">Eliminar</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════ -->
+<!--  MODAL: Nuevo usuario                             -->
+<!-- ══════════════════════════════════════════════════ -->
+<app-modal [open]="showUserModal()" title="Nuevo usuario" size="md" (closed)="closeUserModal()">
+  <div class="modal-section">
+    <div class="modal-section-label">Identidad</div>
+    <div class="modal-section-fields">
+      <div class="field-row">
+        <app-input label="Nombre" [value]="newFirst()" (valueChange)="newFirst.set($event)" />
+        <app-input label="Apellidos" [value]="newLast()" (valueChange)="newLast.set($event)" />
+      </div>
+      <app-input label="Cargo" [value]="newJobTitle()" (valueChange)="newJobTitle.set($event)" placeholder="CEO, Desarrollador..." />
+    </div>
+  </div>
+  <div class="modal-divider"></div>
+  <div class="modal-section">
+    <div class="modal-section-label">Acceso</div>
+    <div class="modal-section-fields">
+      <app-input label="Email *" type="email" [value]="newEmail()" (valueChange)="newEmail.set($event)" />
+      <app-input label="Contrasena *" type="password" [value]="newPassword()" (valueChange)="newPassword.set($event)" hint="Minimo 8 caracteres" />
+      <app-select label="Rol *" [options]="roleOptions()" [value]="newRoleId()" (valueChange)="newRoleId.set($event)" />
+    </div>
+  </div>
+  @if (userError()) {
+    <div class="modal-error">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      {{ userError() }}
+    </div>
+  }
+  <div footer class="modal-footer">
+    <app-button label="Cancelar" variant="ghost" size="sm" (clicked)="closeUserModal()" />
+    <app-button label="Crear usuario" variant="primary" size="sm" [loading]="savingUser()" (clicked)="createUser()" />
+  </div>
+</app-modal>
+
+
+<!-- ══════════════════════════════════════════════════ -->
+<!--  MODAL: Crear / Editar rol con permisos           -->
+<!-- ══════════════════════════════════════════════════ -->
+<app-modal [open]="showRoleModal()" [title]="editingRole() ? 'Editar rol' : 'Nuevo rol'" size="xl" (closed)="closeRoleModal()">
+
+  <div class="role-form-top">
+    <app-input label="Nombre del rol *" [value]="roleName()" (valueChange)="roleName.set($event)" placeholder="Ej: Contable, Gestor, Comercial..." />
+    <app-input label="Descripcion" [value]="roleDesc()" (valueChange)="roleDesc.set($event)" placeholder="Que puede hacer este rol (opcional)" />
+  </div>
+
+  <div class="perm-section">
+    <div class="perm-section-title">Permisos por modulo</div>
+    <div class="perm-hint">Al activar Crear, Editar, Eliminar o Exportar, Ver se activa automaticamente.</div>
+
+    <div class="perm-table-wrap">
+      <table class="perm-table">
+        <thead>
+          <tr>
+            <th class="perm-col-module">Modulo</th>
+            <th class="perm-col-check">Ver</th>
+            <th class="perm-col-check">Crear</th>
+            <th class="perm-col-check">Editar</th>
+            <th class="perm-col-check">Eliminar</th>
+            <th class="perm-col-check">Exportar</th>
+            <th class="perm-col-all">Todo</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of permMatrix(); track row.module) {
+            <tr [class.row-active]="hasAnyPerm(row)">
+              <td class="perm-module-cell">{{ row.label }}</td>
+              <td class="perm-check-cell">
+                <button class="perm-check" [class.on]="row.canView" (click)="togglePerm(row.module, 'canView')">
+                  @if (row.canView) { <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> }
+                </button>
+              </td>
+              <td class="perm-check-cell">
+                <button class="perm-check" [class.on]="row.canCreate" (click)="togglePerm(row.module, 'canCreate')">
+                  @if (row.canCreate) { <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> }
+                </button>
+              </td>
+              <td class="perm-check-cell">
+                <button class="perm-check" [class.on]="row.canEdit" (click)="togglePerm(row.module, 'canEdit')">
+                  @if (row.canEdit) { <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> }
+                </button>
+              </td>
+              <td class="perm-check-cell">
+                <button class="perm-check" [class.on]="row.canDelete" (click)="togglePerm(row.module, 'canDelete')">
+                  @if (row.canDelete) { <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> }
+                </button>
+              </td>
+              <td class="perm-check-cell">
+                <button class="perm-check" [class.on]="row.canExport" (click)="togglePerm(row.module, 'canExport')">
+                  @if (row.canExport) { <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> }
+                </button>
+              </td>
+              <td class="perm-check-cell">
+                <button class="perm-check all-btn" [class.on]="isAllRow(row)" (click)="toggleRowAll(row.module)">
+                  @if (isAllRow(row)) { <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> }
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  @if (roleError()) {
+    <div class="modal-error" style="margin-top:12px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      {{ roleError() }}
+    </div>
+  }
+
+  <div footer class="modal-footer">
+    <app-button label="Cancelar" variant="ghost" size="sm" (clicked)="closeRoleModal()" />
+    <app-button [label]="editingRole() ? 'Guardar cambios' : 'Crear rol'" variant="primary" size="sm" [loading]="savingRole()" (clicked)="saveRole()" />
+  </div>
+</app-modal>
+
+
+<!-- ══════════════════════════════════════════════════ -->
+<!--  MODAL: Crear / Editar equipo                     -->
+<!-- ══════════════════════════════════════════════════ -->
+<app-modal
+  [open]="showTeamModal()"
+  [title]="teamModalMode() === 'create' ? 'Nuevo equipo' : 'Editar equipo'"
+  size="sm"
+  (closed)="closeTeamModal()"
+>
+  <div class="modal-section-fields" style="padding: 4px 0 8px">
+    <app-input label="Nombre *" [value]="teamName()" (valueChange)="teamName.set($event)" placeholder="Desarrollo, Marketing, Soporte..." />
+    <app-input label="Descripcion" [value]="teamDesc()" (valueChange)="teamDesc.set($event)" placeholder="Para que se usa este equipo (opcional)" />
+  </div>
+  @if (teamError()) {
+    <div class="modal-error">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      {{ teamError() }}
+    </div>
+  }
+  <div footer class="modal-footer">
+    <app-button label="Cancelar" variant="ghost" size="sm" (clicked)="closeTeamModal()" />
+    <app-button [label]="teamModalMode() === 'create' ? 'Crear equipo' : 'Guardar'" variant="primary" size="sm" [loading]="savingTeam()" (clicked)="saveTeam()" />
+  </div>
+</app-modal>
+
+
+<!-- ══════════════════════════════════════════════════ -->
+<!--  MODAL: Nueva serie de presupuestos               -->
+<!-- ══════════════════════════════════════════════════ -->
+<app-modal [open]="showSeriesModal()" title="Nueva serie" size="sm" (closed)="closeSeriesModal()">
+  <div class="modal-section">
+    <div class="modal-section-label">Serie</div>
+    <div class="modal-section-fields">
+      <app-input label="Nombre *" [value]="seriesName()" (valueChange)="seriesName.set($event)" placeholder="Principal, Servicios, 2025..." />
+      <app-input
+        label="Prefijo *"
+        [value]="seriesPrefix()"
+        (valueChange)="seriesPrefix.set($event)"
+        placeholder="PRE, QUOT, P25..."
+        hint="Se convertira a mayusculas"
+      />
+      <div class="field-group">
+        <label class="field-label-sm">Primer numero</label>
+        <input
+          class="field-input-sm"
+          type="number"
+          min="1"
+          [value]="seriesNextNum()"
+          (input)="seriesNextNum.set(+$any($event.target).value)"
+        />
+        <span class="field-preview">Vista previa: {{ seriesPreview() }}</span>
+      </div>
+    </div>
+  </div>
+  @if (seriesError()) {
+    <div class="modal-error">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      {{ seriesError() }}
+    </div>
+  }
+  <div footer class="modal-footer">
+    <app-button label="Cancelar" variant="ghost" size="sm" (clicked)="closeSeriesModal()" />
+    <app-button label="Crear serie" variant="primary" size="sm" [loading]="savingSeries()" (clicked)="saveSeries()" />
+  </div>
+</app-modal>

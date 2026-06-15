@@ -1,0 +1,406 @@
+<!-- ── Header ────────────────────────────────────────────────────── -->
+<app-page-header title="Tareas" [subtitle]="totalTasks() + ' tareas'">
+  @if (canCreate()) {
+    <app-button variant="primary" size="sm" (clicked)="openCreate()">+ Nueva tarea</app-button>
+  }
+</app-page-header>
+
+<!-- ── Toolbar: proyectos + vistas ───────────────────────────────── -->
+<div class="tasks-toolbar">
+  <div class="project-tabs">
+    <button class="project-tab" [class.active]="selectedProject()===''" (click)="onProjectChange('')">Todos</button>
+    @for (p of projects(); track p.id) {
+      <button class="project-tab" [class.active]="selectedProject()===p.id" (click)="onProjectChange(p.id)">{{ p.name }}</button>
+    }
+  </div>
+  <div class="view-switcher">
+    <button class="view-btn" [class.active]="viewMode()==='kanban'" (click)="setView('kanban')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="18" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>
+      Kanban
+    </button>
+    <button class="view-btn" [class.active]="viewMode()==='list'" (click)="setView('list')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Lista
+    </button>
+    <button class="view-btn" [class.active]="viewMode()==='gantt'" (click)="setView('gantt')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><path d="M3 6h10"/><path d="M11 18h10"/></svg>
+      Gantt
+    </button>
+  </div>
+</div>
+
+@if (loading()) { <app-spinner [fullPage]="false" size="lg" /> }
+@if (error())   { <div class="error-banner">{{ error() }}</div> }
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- KANBAN                                                          -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+@if (!loading() && !error() && viewMode() === 'kanban') {
+  <div class="kanban-board">
+    @for (col of columns(); track col.status) {
+      <div
+        class="kanban-col"
+        [class.drag-over]="col.dragOver"
+        (dragover)="onDragOver($event, col.status)"
+        (dragleave)="onDragLeave(col.status)"
+        (drop)="onDrop($event, col.status)"
+      >
+        <!-- Cabecera -->
+        <div class="kanban-col-header" [ngClass]="columnHeaderClass(col.status)">
+          <span class="col-label">{{ col.label }}</span>
+          <span class="col-count">{{ col.tasks.length }}</span>
+          @if (canCreate()) {
+            <button class="col-add-btn" (click)="openCreate(col.status)" title="Añadir tarea">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          }
+        </div>
+
+        <!-- Tarjetas -->
+        <div class="kanban-cards">
+          @for (task of col.tasks; track task.id) {
+            <div
+              class="task-card"
+              [class.task-card--overdue]="isOverdue(task)"
+              [class.task-card--done]="task.status==='DONE'"
+              draggable="true"
+              (dragstart)="onDragStart($event, task)"
+              (dragend)="onDragEnd($event)"
+              (click)="openDetail(task)"
+            >
+              <div class="task-card-top">
+                <span class="priority-tag" [ngClass]="priorityClass(task.priority)">{{ priorityLabel(task.priority) }}</span>
+                <div class="task-card-actions" (click)="$event.stopPropagation()">
+                  @if (canEdit()) {
+                    <button class="card-btn" (click)="openEdit(task)" title="Editar">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                  }
+                  @if (canDelete()) {
+                    <button class="card-btn card-btn--danger" (click)="openDelete(task, $event)" title="Eliminar">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <p class="task-card-title">{{ task.title }}</p>
+              @if (task.description) { <p class="task-card-desc">{{ task.description }}</p> }
+
+              <div class="task-card-meta">
+                @if (!selectedProject()) { <span class="meta-project">{{ task.projectName }}</span> }
+                @if (task.dueDate) {
+                  <span class="meta-date" [class.meta-date--overdue]="isOverdue(task)">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    {{ formatDate(task.dueDate) }}
+                  </span>
+                }
+                @if (task.estimatedMinutes) {
+                  <span class="meta-time">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    {{ formatDuration(task.estimatedMinutes) }}
+                  </span>
+                }
+              </div>
+
+              <div class="drag-hint">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="17" r="1" fill="currentColor"/><circle cx="15" cy="7" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="17" r="1" fill="currentColor"/></svg>
+                Arrastra para mover
+              </div>
+            </div>
+          }
+          @if (col.tasks.length === 0) {
+            <div class="col-empty">
+              Sin tareas
+              @if (canCreate()) { <button class="col-empty-add" (click)="openCreate(col.status)">+ Añadir</button> }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- LISTA                                                           -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+@if (!loading() && !error() && viewMode() === 'list') {
+  <div class="list-view">
+    @if (filteredTasks().length === 0) {
+      <div class="empty-state">
+        <p class="empty-title">No hay tareas</p>
+        @if (canCreate()) { <app-button variant="primary" size="sm" (clicked)="openCreate()">Crear tarea</app-button> }
+      </div>
+    }
+    @for (col of columns(); track col.status) {
+      @if (col.tasks.length > 0) {
+        <div class="list-section">
+          <div class="list-section-header" [ngClass]="columnHeaderClass(col.status)">
+            <span>{{ col.label }}</span><span class="col-count">{{ col.tasks.length }}</span>
+          </div>
+          <div class="list-table-wrap">
+            <table class="list-table">
+              <thead><tr>
+                <th class="th-priority"></th>
+                <th>Tarea</th><th>Proyecto</th><th>Inicio</th><th>Fecha límite</th><th>Estimado</th>
+                <th class="th-actions"></th>
+              </tr></thead>
+              <tbody>
+                @for (task of col.tasks; track task.id) {
+                  <tr (click)="openDetail(task)" style="cursor:pointer" [class.row--done]="task.status==='DONE'">
+                    <td class="td-priority"><span class="priority-dot" [ngClass]="priorityClass(task.priority)"></span></td>
+                    <td class="td-title">
+                      <span class="task-title">{{ task.title }}</span>
+                      @if (task.description) { <span class="task-desc-small">{{ task.description }}</span> }
+                    </td>
+                    <td><span class="list-project-pill">{{ task.projectName }}</span></td>
+                    <td>{{ formatDate(task.startDate) }}</td>
+                    <td [class.td-overdue]="isOverdue(task)">{{ formatDate(task.dueDate) }}</td>
+                    <td class="td-mono">{{ formatDuration(task.estimatedMinutes) }}</td>
+                    <td class="td-actions" (click)="$event.stopPropagation()">
+                      <div class="row-actions">
+                        @if (canEdit()) {
+                          <button class="action-btn" (click)="openEdit(task)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                        }
+                        @if (canDelete()) {
+                          <button class="action-btn action-btn--danger" (click)="openDelete(task, $event)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>
+                          </button>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    }
+  </div>
+}
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- GANTT                                                           -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+@if (!loading() && !error() && viewMode() === 'gantt') {
+  <div class="gantt-wrap" [class.gantt-dragging]="isDraggingGantt()">
+    @if (ganttRows().length === 0) {
+      <div class="empty-state">
+        <p class="empty-title">Sin tareas con fecha límite</p>
+        <p class="empty-sub">Añade fechas límite a las tareas para verlas en el Gantt</p>
+      </div>
+    } @else {
+      <div class="gantt-container">
+        <!-- Etiquetas fijas -->
+        <div class="gantt-labels">
+          <div class="gantt-header-cell">Tarea</div>
+          @for (row of ganttRows(); track row.task.id) {
+            <div class="gantt-label-row" (click)="ganttBarClick(row.task)">
+              <span class="priority-dot" [ngClass]="priorityClass(row.task.priority)"></span>
+              <span class="gantt-label-text">{{ row.task.title }}</span>
+              @if (!selectedProject()) { <span class="gantt-label-project">{{ row.task.projectName }}</span> }
+            </div>
+          }
+        </div>
+
+        <!-- Timeline scroll -->
+        <div class="gantt-timeline-scroll">
+          <div class="gantt-timeline" [style.width.px]="ganttTotalWidth()">
+
+            <!-- Header días -->
+            <div class="gantt-header-row">
+              @for (h of ganttHeaders(); track h.col) {
+                <div class="gantt-day-header"
+                  [class.gantt-day-month]="h.isMonth"
+                  [class.gantt-day-today]="h.isToday"
+                  [style.width.px]="DAY_PX">{{ h.label }}</div>
+              }
+            </div>
+
+            <!-- Línea de hoy -->
+            @if (todayOffset() >= 0) {
+              <div class="gantt-today-line" [style.left.px]="todayOffset() + DAY_PX / 2"></div>
+            }
+
+            <!-- Filas -->
+            @for (row of ganttRows(); track row.task.id) {
+              <div class="gantt-row">
+                @for (h of ganttHeaders(); track h.col) {
+                  <div class="gantt-day-cell" [style.width.px]="DAY_PX"></div>
+                }
+
+                <!-- Barra con 3 zonas: handle-inicio | cuerpo | handle-fin -->
+                <div
+                  class="gantt-bar"
+                  [class.gantt-bar--done]="row.task.status==='DONE'"
+                  [class.gantt-bar--overdue]="isOverdue(row.task)"
+                  [style.left.px]="row.startPx"
+                  [style.width.px]="row.widthPx"
+                  [style.background]="row.color"
+                >
+                  <!-- Handle inicio (resize izquierda) -->
+                  <div class="gantt-handle gantt-handle--start"
+                    (mousedown)="ganttMouseDown($event, row.task, 'start')"
+                    title="Mover fecha de inicio">
+                    <div class="gantt-handle-grip"></div>
+                  </div>
+
+                  <!-- Cuerpo (mover toda la barra) -->
+                  <div class="gantt-bar-body"
+                    (mousedown)="ganttMouseDown($event, row.task, 'bar')"
+                    (click)="ganttBarClick(row.task)">
+                    <span class="gantt-bar-label">{{ row.task.title }}</span>
+                  </div>
+
+                  <!-- Handle fin (resize derecha) -->
+                  <div class="gantt-handle gantt-handle--end"
+                    (mousedown)="ganttMouseDown($event, row.task, 'end')"
+                    title="Mover fecha límite">
+                    <div class="gantt-handle-grip"></div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+      <p class="gantt-hint">
+        <span>◀ Arrastra el borde izquierdo para cambiar la fecha de inicio</span>
+        <span>▶ Arrastra el borde derecho para cambiar la fecha límite</span>
+        <span>Arrastra el centro para mover toda la barra</span>
+      </p>
+    }
+  </div>
+}
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- MODAL CREAR/EDITAR                                              -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<app-modal [open]="showModal()" [title]="modalMode()==='create' ? 'Nueva tarea' : 'Editar tarea'" size="md" (closed)="showModal.set(false)">
+  @if (modalError()) { <div class="modal-error">{{ modalError() }}</div> }
+  <div class="modal-section">
+    <div class="modal-section-label">Tarea</div>
+    <div class="modal-section-fields">
+      <app-select label="Proyecto *" [options]="projectFormOptions()" [value]="fProjectId()" (changed)="fProjectId.set($event)" />
+      <app-input label="Título *" [value]="fTitle()" (valueChange)="fTitle.set($event)" placeholder="Describe la tarea" />
+      <app-textarea label="Descripción" [value]="fDescription()" (changed)="fDescription.set($event)" [rows]="2" />
+    </div>
+  </div>
+  <div class="modal-divider"></div>
+  <div class="modal-section">
+    <div class="modal-section-label">Detalles</div>
+    <div class="modal-section-fields">
+      <div class="field-row">
+        <app-select label="Prioridad" [options]="priorityOptions" [value]="fPriority()" (changed)="setPriority($event)" />
+        <app-select label="Estado" [options]="statusOptions" [value]="fStatus()" (changed)="setStatus($event)" />
+      </div>
+      <div class="field-row">
+        <app-input label="Fecha de inicio" type="date" [value]="fStartDate()" (valueChange)="fStartDate.set($event)" />
+        <app-input label="Fecha límite" type="date" [value]="fDueDate()" (valueChange)="fDueDate.set($event)" />
+      </div>
+      <app-input label="Estimado (minutos)" type="number" [value]="fEstimatedMinutes()" (valueChange)="fEstimatedMinutes.set($event)" placeholder="ej: 120" />
+    </div>
+  </div>
+  <div footer class="modal-footer">
+    <app-button variant="ghost" (clicked)="showModal.set(false)">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving()" (clicked)="save()">{{ modalMode()==='create' ? 'Crear' : 'Guardar' }}</app-button>
+  </div>
+</app-modal>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- MODAL DETALLE                                                   -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+@if (detailTask(); as task) {
+  <app-modal [open]="showDetailModal()" [title]="task.title" size="md" (closed)="showDetailModal.set(false)">
+
+    <div class="detail-header">
+      <span class="priority-tag" [ngClass]="priorityClass(task.priority)">{{ priorityLabel(task.priority) }}</span>
+      <span class="detail-status" [ngClass]="columnHeaderClass(task.status)">{{ statusLabel(task.status) }}</span>
+      <span class="detail-project">{{ task.projectName }}</span>
+      @if (task.startDate) {
+        <span class="detail-date">Inicio: {{ formatDateFull(task.startDate) }}</span>
+      }
+      @if (task.dueDate) {
+        <span class="detail-date" [class.detail-date--overdue]="isOverdue(task)">Vence: {{ formatDateFull(task.dueDate) }}</span>
+      }
+      @if (task.estimatedMinutes) {
+        <span class="detail-date">{{ formatDuration(task.estimatedMinutes) }}</span>
+      }
+    </div>
+
+    @if (task.description) { <p class="detail-description">{{ task.description }}</p> }
+
+    <div class="modal-divider"></div>
+
+    <!-- Asignados -->
+    <div class="modal-section">
+      <div class="modal-section-label">Personas asignadas</div>
+      @if (loadingAssignees()) {
+        <app-spinner [fullPage]="false" size="sm" />
+      } @else {
+        <div class="assignees-list">
+          @for (a of detailAssignees(); track a.id) {
+            <div class="assignee-row">
+              <div class="assignee-avatar">{{ initials(a.userName) }}</div>
+              <div class="assignee-info">
+                <span class="assignee-name">{{ a.userName }}</span>
+                <span class="assignee-email">{{ a.userEmail }}</span>
+              </div>
+              @if (canAdmin()) {
+                <button class="assignee-remove" (click)="removeAssignee(a)" title="Quitar">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              }
+            </div>
+          }
+          @if (detailAssignees().length === 0) { <p class="assignees-empty">Sin personas asignadas</p> }
+        </div>
+
+        @if (canAdmin() && availableAssigneeOptions().length > 0) {
+          <div class="assignee-add">
+            <app-select [options]="availableAssigneeOptions()" [value]="selectedAssignee()" (changed)="selectedAssignee.set($event)" placeholder="Añadir persona..." />
+            <app-button variant="ghost" size="sm" [loading]="addingAssignee()" (clicked)="addAssignee()">Añadir</app-button>
+          </div>
+        }
+      }
+    </div>
+
+    <div class="modal-divider"></div>
+
+    <!-- Cambiar estado -->
+    @if (canEdit()) {
+      <div class="modal-section">
+        <div class="modal-section-label">Cambiar estado</div>
+        <div class="status-buttons">
+          @for (col of columnsForSelect(task.status); track col.status) {
+            <button class="status-move-btn" [ngClass]="columnHeaderClass(col.status)"
+              (click)="changeStatus(task, col.status); showDetailModal.set(false)">
+              {{ col.label }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    <div footer class="modal-footer">
+      @if (canDelete()) { <app-button variant="danger" (clicked)="openDelete(task); showDetailModal.set(false)">Eliminar</app-button> }
+      <div style="flex:1"></div>
+      <app-button variant="ghost" (clicked)="openEdit(task); showDetailModal.set(false)">Editar</app-button>
+      <app-button variant="primary" (clicked)="showDetailModal.set(false)">Cerrar</app-button>
+    </div>
+  </app-modal>
+}
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- MODAL ELIMINAR                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<app-modal [open]="showDeleteModal()" title="Eliminar tarea" size="sm" (closed)="showDeleteModal.set(false)">
+  <p class="delete-confirm-text">¿Eliminar <strong>{{ deleteTitle() }}</strong>? Esta acción no se puede deshacer.</p>
+  <div footer class="modal-footer">
+    <app-button variant="ghost" (clicked)="showDeleteModal.set(false)">Cancelar</app-button>
+    <app-button variant="danger" [loading]="deleting()" (clicked)="confirmDelete()">Eliminar</app-button>
+  </div>
+</app-modal>

@@ -1,0 +1,207 @@
+<app-page-header title="Proyectos" subtitle="Gestiona todos tus proyectos">
+  @if (canCreate()) {
+    <app-button variant="primary" size="sm" (clicked)="openCreate()">
+      + Nuevo proyecto
+    </app-button>
+  }
+</app-page-header>
+
+<!-- Barra de búsqueda -->
+<div class="toolbar">
+  <app-input
+    placeholder="Buscar proyectos..."
+    [value]="search()"
+    (valueChange)="onSearch($event)"
+    class="toolbar-search"
+  />
+</div>
+
+<!-- Estado de carga -->
+@if (loading()) {
+  <app-spinner [fullPage]="false" size="lg" />
+}
+
+@if (error()) {
+  <div class="error-banner">{{ error() }}</div>
+}
+
+<!-- Lista de proyectos -->
+@if (!loading() && !error()) {
+  @if (data()?.content?.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1.5">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <p class="empty-title">No hay proyectos todavía</p>
+      @if (canCreate()) {
+        <p class="empty-sub">Crea tu primer proyecto para empezar a registrar tiempo y tareas</p>
+        <app-button variant="primary" size="sm" (clicked)="openCreate()">Crear proyecto</app-button>
+      }
+    </div>
+  } @else {
+    <div class="projects-grid">
+      @for (project of data()!.content; track project.id) {
+        <div class="project-card">
+          <div class="project-card-header">
+            <div class="project-info">
+              <span class="project-name">{{ project.name }}</span>
+              @if (project.code) {
+                <span class="project-code">{{ project.code }}</span>
+              }
+            </div>
+            <app-badge [label]="statusLabel(project.status)" [variant]="statusBadge(project.status)" [dot]="true" />
+          </div>
+
+          @if (project.description) {
+            <p class="project-description">{{ project.description }}</p>
+          }
+
+          <div class="project-meta">
+            @if (project.clientName) {
+              <span class="meta-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                {{ project.clientName }}
+              </span>
+            }
+            @if (project.startDate || project.endDate) {
+              <span class="meta-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                {{ formatDate(project.startDate) }}
+                @if (project.endDate) { → {{ formatDate(project.endDate) }} }
+              </span>
+            }
+            @if (project.billable) {
+              <span class="meta-item meta-billable">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="1" x2="12" y2="23"/>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                Facturable
+                @if (project.hourlyRate) { · {{ project.hourlyRate }}€/h }
+              </span>
+            }
+          </div>
+
+          <div class="project-card-footer">
+            <span class="project-date">Creado {{ formatDate(project.createdAt) }}</span>
+            <div class="project-actions">
+              @if (canEdit()) {
+                <button class="action-btn" (click)="openEdit(project)" title="Editar">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+              }
+              @if (canDelete()) {
+                <button class="action-btn action-btn--danger" (click)="openDelete(project)" title="Eliminar">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14H6L5 6"/>
+                    <path d="M10 11v6M14 11v6"/>
+                    <path d="M9 6V4h6v2"/>
+                  </svg>
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Paginación -->
+    @if ((data()?.totalPages ?? 0) > 1) {
+      <div class="pagination">
+        <button class="page-btn" [disabled]="currentPage() === 0" (click)="goToPage(currentPage() - 1)">←</button>
+        @for (p of pages(); track p) {
+          <button class="page-btn" [class.active]="p === currentPage()" (click)="goToPage(p)">{{ p + 1 }}</button>
+        }
+        <button class="page-btn" [disabled]="currentPage() === (data()?.totalPages ?? 1) - 1" (click)="goToPage(currentPage() + 1)">→</button>
+      </div>
+    }
+  }
+}
+
+<!-- ── Modal Crear/Editar ─────────────────────────────────────────── -->
+<app-modal
+  [open]="showModal()"
+  [title]="modalMode() === 'create' ? 'Nuevo proyecto' : 'Editar proyecto'"
+  size="md"
+  (closed)="showModal.set(false)"
+>
+  @if (modalError()) {
+    <div class="modal-error">{{ modalError() }}</div>
+  }
+
+  <div class="modal-section">
+    <div class="modal-section-label">Información</div>
+    <div class="modal-section-fields">
+      <app-input label="Nombre *" [value]="fName()" (valueChange)="fName.set($event)" placeholder="Nombre del proyecto" />
+      <div class="field-row">
+        <app-input label="Código" [value]="fCode()" (valueChange)="fCode.set($event)" placeholder="Ej: PRJ-001" />
+        @if (modalMode() === 'edit') {
+          <app-select label="Estado" [options]="statusOptions" [value]="fStatus()" (valueChange)="setStatus($event)" />
+        }
+      </div>
+      <app-textarea label="Descripción" [value]="fDescription()" (changed)="fDescription.set($event)" placeholder="Descripción del proyecto" [rows]="3" />
+    </div>
+  </div>
+
+  <div class="modal-divider"></div>
+
+  <div class="modal-section">
+    <div class="modal-section-label">Fechas</div>
+    <div class="modal-section-fields">
+      <div class="field-row">
+        <app-input label="Fecha inicio" type="date" [value]="fStartDate()" (valueChange)="fStartDate.set($event)" />
+        <app-input label="Fecha fin" type="date" [value]="fEndDate()" (valueChange)="fEndDate.set($event)" />
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-divider"></div>
+
+  <div class="modal-section">
+    <div class="modal-section-label">Facturación</div>
+    <div class="modal-section-fields">
+      <div class="field-row">
+        <app-input label="Precio/hora (€)" type="number" [value]="fHourlyRate()" (valueChange)="fHourlyRate.set($event)" placeholder="0.00" />
+      </div>
+    </div>
+  </div>
+
+  <div footer class="modal-footer">
+    <app-button variant="ghost" (clicked)="showModal.set(false)">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving()" (clicked)="save()">
+      {{ modalMode() === 'create' ? 'Crear proyecto' : 'Guardar cambios' }}
+    </app-button>
+  </div>
+</app-modal>
+
+<!-- ── Modal Eliminar ─────────────────────────────────────────────── -->
+<app-modal [open]="showDeleteModal()" title="Eliminar proyecto" size="sm" (closed)="showDeleteModal.set(false)">
+  <p class="delete-confirm-text">
+    ¿Seguro que quieres eliminar <strong>{{ deleteName() }}</strong>?
+    Esta acción no se puede deshacer.
+  </p>
+  <div footer class="modal-footer">
+    <app-button variant="ghost" (clicked)="showDeleteModal.set(false)">Cancelar</app-button>
+    <app-button variant="danger" [loading]="deleting()" (clicked)="confirmDelete()">Eliminar</app-button>
+  </div>
+</app-modal>

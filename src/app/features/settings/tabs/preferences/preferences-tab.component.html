@@ -1,0 +1,52 @@
+<div class="settings-card">
+
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Preferencias</h2>
+      <p class="card-desc">Idioma, zona horaria y apariencia</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="card-loading">
+      <div class="skeleton"></div>
+      <div class="skeleton short"></div>
+    </div>
+  } @else {
+
+    <div class="card-section">
+      <div class="section-label">Apariencia</div>
+      <div class="section-fields">
+        <app-select label="Tema" [options]="themeOptions" [value]="theme()" (valueChange)="theme.set($event)" />
+      </div>
+    </div>
+
+    <div class="card-divider"></div>
+
+    <div class="card-section">
+      <div class="section-label">Localización</div>
+      <div class="section-fields">
+        <div class="field-row">
+          <app-select label="Idioma" [options]="languageOptions" [value]="language()" (valueChange)="language.set($event)" />
+          <app-select label="Zona horaria" [options]="timezoneOptions" [value]="timezone()" (valueChange)="timezone.set($event)" />
+        </div>
+        <div class="field-row">
+          <app-select label="Formato de fecha" [options]="dateOptions" [value]="dateFormat()" (valueChange)="dateFormat.set($event)" />
+          <app-select label="Formato de hora" [options]="timeOptions" [value]="timeFormat()" (valueChange)="timeFormat.set($event)" />
+        </div>
+        <app-select label="Semana empieza el" [options]="weekOptions" [value]="weekStartsOn()" (valueChange)="weekStartsOn.set($event)" />
+      </div>
+    </div>
+
+    <div class="card-footer">
+      @if (success()) {
+        <span class="success-msg">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Preferencias guardadas
+        </span>
+      }
+      <app-button label="Guardar preferencias" variant="primary" size="sm" [loading]="saving()" (clicked)="save()" />
+    </div>
+
+  }
+</div>

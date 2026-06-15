@@ -1,0 +1,62 @@
+<div class="flex flex-col gap-1.5">
+  @if (label()) {
+    <label class="text-sm font-medium text-text">
+      {{ label() }}
+      @if (required()) {
+        <span class="text-danger ml-0.5">*</span>
+      }
+    </label>
+  }
+
+  <div class="relative">
+    @if (prefixIcon()) {
+      <span
+        class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-text-3 pointer-events-none"
+        [innerHTML]="prefixIcon()"
+      >
+      </span>
+    }
+
+    @if (prefixText()) {
+      <span
+        class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-3 pointer-events-none"
+      >
+        {{ prefixText() }}
+      </span>
+    }
+
+    <input
+      [type]="type()"
+      [class]="inputClasses"
+      [value]="value()"
+      [placeholder]="placeholder()"
+      [disabled]="disabled()"
+      [readOnly]="readonly()"
+      (input)="onInput($event)"
+      (blur)="blurred.emit()"
+      (keyup.enter)="entered.emit()"
+    />
+
+    @if (suffixIcon()) {
+      <span
+        class="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-text-3 pointer-events-none"
+        [innerHTML]="suffixIcon()"
+      >
+      </span>
+    }
+
+    @if (suffixText()) {
+      <span
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-text-3 pointer-events-none"
+      >
+        {{ suffixText() }}
+      </span>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="text-xs text-danger">{{ error() }}</p>
+  } @else if (hint()) {
+    <p class="text-xs text-text-3">{{ hint() }}</p>
+  }
+</div>

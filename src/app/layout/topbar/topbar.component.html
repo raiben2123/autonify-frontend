@@ -1,0 +1,24 @@
+<header class="topbar">
+  <div class="topbar-left">
+    <ng-content select="[breadcrumb]" />
+  </div>
+
+  <div class="topbar-right">
+    <button class="topbar-icon-btn" title="Notificaciones">
+      <span [innerHTML]="icons.bell | safeHtml"></span>
+      <span class="notification-dot"></span>
+    </button>
+
+    <div class="topbar-divider"></div>
+
+    <div class="topbar-user">
+      <div class="user-avatar">{{ initials }}</div>
+      <div class="user-info">
+        <span class="user-name">{{ auth.fullName() }}</span>
+        <span class="user-tenant"
+          >{{ auth.user()?.role | roleLabel }} · {{ auth.user()?.tenantName }}</span
+        >
+      </div>
+    </div>
+  </div>
+</header>

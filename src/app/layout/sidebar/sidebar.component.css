@@ -1,0 +1,231 @@
+/* ── Shell ───────────────────────────────────────────────────── */
+:host { display: contents; }
+
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+/* ══════════════════════════════════════════════════
+   SIDEBAR — un único elemento que se expande
+   Estado base: 58px (solo iconos)
+   Estado hover: 220px (iconos + texto)
+   ══════════════════════════════════════════════════ */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 58px;
+  height: 100vh;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 30;
+}
+
+.sidebar:hover {
+  width: 220px;
+}
+
+/* ── Logo ───────────────────────────────────────── */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 58px;
+  padding: 0 19px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.logo-text {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.025em;
+  opacity: 0;
+  transition: opacity 150ms ease 50ms;
+}
+
+.sidebar:hover .logo-text {
+  opacity: 1;
+}
+
+/* ── Nav ────────────────────────────────────────── */
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 0;
+  overflow: hidden;
+  gap: 0;
+}
+
+/* Grupo — padding simétrico arriba y abajo */
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 0;
+}
+
+.nav-group + .nav-group {
+  border-top: 1px solid var(--color-border);
+  padding-top: 10px;
+}
+
+.nav-group-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-3);
+  padding: 0 0 4px 20px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 150ms ease;
+  /* Altura fija siempre reservada — los iconos no se mueven */
+  height: 20px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.sidebar:hover .nav-group-label {
+  opacity: 1;
+}
+
+/* Item de navegación */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 11px;
+  margin: 1px 8px;
+  border-radius: 7px;
+  color: var(--color-text-3);
+  text-decoration: none;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 150ms ease, color 150ms ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: calc(100% - 16px);
+  text-align: left;
+}
+
+.nav-item:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.nav-item.active {
+  background: var(--color-primary-muted);
+  color: var(--color-primary);
+}
+
+.nav-item.danger:hover {
+  background: var(--color-danger-muted);
+  color: var(--color-danger);
+}
+
+.nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.nav-label {
+  opacity: 0;
+  transition: opacity 150ms ease 50ms;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar:hover .nav-label {
+  opacity: 1;
+}
+
+/* ── Footer ─────────────────────────────────────── */
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0 10px;
+  border-top: 1px solid var(--color-border);
+  gap: 1px;
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 11px;
+  margin: 2px 8px 0;
+  border-radius: 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: default;
+}
+
+.user-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--color-primary-muted);
+  color: var(--color-primary);
+  font-size: 0.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 150ms ease 50ms;
+}
+
+.sidebar:hover .user-info {
+  opacity: 1;
+}
+
+.user-name {
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-role {
+  font-size: 0.63rem;
+  color: var(--color-text-3);
+}
+
+/* ── Main ───────────────────────────────────────── */
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 40px;
+  min-width: 0;
+}

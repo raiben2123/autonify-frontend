@@ -1,0 +1,56 @@
+<div class="flex flex-col gap-1.5">
+  @if (label()) {
+    <label class="text-sm font-medium text-text">
+      {{ label() }}
+      @if (required()) {
+        <span class="text-danger ml-0.5">*</span>
+      }
+    </label>
+  }
+
+  <div class="relative">
+    <select
+      [class]="selectClasses"
+      [value]="value()"
+      [disabled]="disabled()"
+      (change)="onChange($event)"
+    >
+      @if (placeholder()) {
+        <option value="" disabled [selected]="!value()">{{ placeholder() }}</option>
+      }
+
+      @for (option of options(); track option.value) {
+        <option
+          [value]="option.value"
+          [disabled]="option.disabled ?? false"
+          [selected]="option.value === value()"
+        >
+          {{ option.label }}
+        </option>
+      }
+    </select>
+
+    <!-- Flecha personalizada -->
+    <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-3">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </span>
+  </div>
+
+  @if (error()) {
+    <p class="text-xs text-danger">{{ error() }}</p>
+  } @else if (hint()) {
+    <p class="text-xs text-text-3">{{ hint() }}</p>
+  }
+</div>

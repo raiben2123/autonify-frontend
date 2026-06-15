@@ -1,0 +1,189 @@
+<app-page-header title="Categorías de Catálogo" subtitle="Gestiona las categorías de productos y servicios">
+  <app-button variant="primary" size="sm" (click)="openCreate()">
+    + Nueva categoría
+  </app-button>
+</app-page-header>
+
+<!-- Estado de carga -->
+@if (loading()) {
+  <app-spinner [fullPage]="false" size="lg" />
+}
+
+@if (error()) {
+  <div class="error-banner">{{ error() }}</div>
+}
+
+<!-- Lista de categorías -->
+@if (!loading() && !error()) {
+  @if (data()?.content?.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+          <path d="M12 7v5l4.25 2.5"/>
+        </svg>
+      </div>
+      <p class="empty-title">No hay categorías todavía</p>
+      @if (canCreate()) {
+        <p class="empty-sub">Crea tu primera categoría para organizar productos y servicios</p>
+        <app-button variant="primary" size="sm" (click)="openCreate()">Crear categoría</app-button>
+      }
+    </div>
+  } @else {
+    <div class="categories-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th>Color</th>
+            <th>Orden</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (category of data()!.content; track category.id) {
+            <tr>
+              <td>{{ category.name }}</td>
+              <td>{{ category.description || '-' }}</td>
+              <td>
+                <div class="color-badge" [style.backgroundColor]="category.color || '#3B82F6'"></div>
+              </td>
+              <td>{{ category.sortOrder }}</td>
+              <td>
+                @if (category.active) {
+                  <app-badge label="Activa" variant="success"></app-badge>
+                } @else {
+                  <app-badge label="Inactiva" variant="default"></app-badge>
+                }
+              </td>
+              <td class="actions">
+                @if (canEdit()) {
+                  <app-button label="Editar" variant="secondary" size="sm" (click)="openEdit(category)"></app-button>
+                }
+                @if (canDelete()) {
+                  <app-button label="Eliminar" variant="danger" size="sm" (click)="openDelete(category)"></app-button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <!-- Paginación -->
+      @if (data()! && data()!.totalPages > 1) {
+        <div class="pagination">
+          <app-button variant="secondary" size="sm" [disabled]="currentPage() === 0" (click)="prevPage()">
+            ← Anterior
+          </app-button>
+          <span class="pagination-info">
+            Página {{ currentPage() + 1 }} de {{ data()!.totalPages }}
+          </span>
+          <app-button variant="secondary" size="sm" [disabled]="currentPage() === data()!.totalPages - 1" (click)="nextPage()">
+            Siguiente →
+          </app-button>
+        </div>
+      }
+    </div>
+  }
+}
+
+<!-- Modal crear/editar -->
+<app-modal [open]="showModal()" (closed)="closeModal()" [title]="modalMode() === 'create' ? 'Nueva Categoría' : 'Editar Categoría'">
+  @if (modalError()) {
+    <div class="error-banner">{{ modalError() }}</div>
+  }
+
+  <div class="form-group">
+    <label for="name">Nombre *</label>
+    <app-input
+      id="name"
+      placeholder="Nombre de la categoría"
+      [value]="fName()"
+      (changed)="fName.set($event)"
+      [disabled]="saving()"
+    />
+  </div>
+
+  <div class="form-group">
+    <label for="description">Descripción</label>
+    <app-textarea
+      id="description"
+      placeholder="Descripción de la categoría"
+      [value]="fDescription()"
+      (changed)="fDescription.set($event)"
+      [disabled]="saving()"
+    />
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="color">Color</label>
+      <input
+        type="color"
+        id="color"
+        [value]="fColor()"
+        (input)="fColor.set($event.target.value)"
+        [disabled]="saving()"
+        class="color-input"
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="sortOrder">Orden</label>
+      <app-input
+        id="sortOrder"
+        type="number"
+        [value]="fSortOrder()"
+        (changed)="fSortOrder.set($event)"
+        [disabled]="saving()"
+      />
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="active" class="checkbox-label">
+      <input
+        type="checkbox"
+        id="active"
+        [checked]="fActive()"
+        (change)="fActive.set($event.target.checked)"
+        [disabled]="saving()"
+      />
+      <span>Categoría Activa</span>
+    </label>
+  </div>
+
+  <div class="modal-actions">
+    <app-button variant="secondary" (click)="closeModal()" [disabled]="saving()">
+      Cancelar
+    </app-button>
+    <app-button variant="primary" (click)="save()" [disabled]="saving() || !fName()">
+      @if (saving()) {
+        Guardando...
+      } @else {
+        Guardar
+      }
+    </app-button>
+  </div>
+</app-modal>
+
+<!-- Modal eliminar -->
+<app-modal [open]="showDeleteModal()" (closed)="closeDeleteModal()" title="Eliminar Categoría" variant="danger">
+  <p>¿Estás seguro de que deseas eliminar la categoría <strong>{{ deleteName() }}</strong>?</p>
+  <p class="text-muted">Esta acción no se puede deshacer.</p>
+
+  <div class="modal-actions">
+    <app-button variant="secondary" (click)="closeDeleteModal()" [disabled]="deleting()">
+      Cancelar
+    </app-button>
+    <app-button variant="danger" (click)="confirmDelete()" [disabled]="deleting()">
+      @if (deleting()) {
+        Eliminando...
+      } @else {
+        Eliminar
+      }
+    </app-button>
+  </div>
+</app-modal>

@@ -1,0 +1,16 @@
+<div [class]="classes">
+  @if (title() || subtitle()) {
+    <div class="px-6 pt-6 pb-4 border-b border-border">
+      @if (title()) {
+        <h3 class="text-base font-semibold text-text">{{ title() }}</h3>
+      }
+      @if (subtitle()) {
+        <p class="text-sm text-text-2 mt-0.5">{{ subtitle() }}</p>
+      }
+    </div>
+  }
+
+  <div [class]="bodyPadding">
+    <ng-content />
+  </div>
+</div>

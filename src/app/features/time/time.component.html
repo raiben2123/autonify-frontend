@@ -1,0 +1,216 @@
+<app-page-header title="Tiempo" subtitle="Registra y gestiona el tiempo trabajado">
+  @if (canCreate()) {
+    <app-button variant="primary" size="sm" (clicked)="openCreate()">+ Entrada manual</app-button>
+  }
+</app-page-header>
+
+<!-- ── Cronómetro ──────────────────────────────────────────────── -->
+@if (canCreate()) {
+  <div class="timer-card" [class.timer-card--running]="runningEntry()">
+    <div class="timer-display">
+      <span class="timer-time">{{ timerDisplay() }}</span>
+      @if (runningEntry()) {
+        <div class="timer-running-info">
+          @if (runningEntry()!.projectName) {
+            <span class="timer-project">{{ runningEntry()!.projectName }}</span>
+          }
+          @if (runningEntry()!.description) {
+            <span class="timer-desc-running">{{ runningEntry()!.description }}</span>
+          }
+        </div>
+      }
+    </div>
+
+    @if (!runningEntry()) {
+      <div class="timer-inputs">
+        <app-select
+          [options]="projectOptions()"
+          [value]="timerProject()"
+          (valueChange)="timerProject.set($event)"
+          placeholder="Proyecto (opcional)"
+        />
+        <app-input
+          [value]="timerDesc()"
+          (valueChange)="timerDesc.set($event)"
+          placeholder="¿En qué estás trabajando?"
+        />
+      </div>
+    }
+
+    <div class="timer-action">
+      @if (!runningEntry()) {
+        <button class="timer-btn timer-btn--start" [disabled]="startingTimer()" (click)="startTimer()">
+          @if (startingTimer()) {
+            <app-spinner size="sm" />
+          } @else {
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+          }
+        </button>
+      } @else {
+        <button class="timer-btn timer-btn--stop" [disabled]="stoppingTimer()" (click)="stopTimer()">
+          @if (stoppingTimer()) {
+            <app-spinner size="sm" />
+          } @else {
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="4" width="4" height="16"/>
+              <rect x="14" y="4" width="4" height="16"/>
+            </svg>
+          }
+        </button>
+      }
+    </div>
+  </div>
+}
+
+<!-- ── Lista de entradas ─────────────────────────────────────────── -->
+@if (loading()) { <app-spinner [fullPage]="false" size="lg" /> }
+
+@if (error()) {
+  <div class="error-banner">{{ error() }}</div>
+}
+
+@if (!loading() && !error()) {
+  @if (data()?.content?.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      <p class="empty-title">Sin registros de tiempo</p>
+      <p class="empty-sub">Usa el cronómetro o añade una entrada manual</p>
+    </div>
+  } @else {
+    <div class="entries-list">
+      @for (entry of data()!.content; track entry.id) {
+        <div class="entry-row" [class.entry-row--running]="entry.status === 'RUNNING'">
+          <div class="entry-date">
+            <span class="entry-day">{{ formatDate(entry.date) }}</span>
+            @if (isToday(entry.date)) {
+              <span class="today-badge">Hoy</span>
+            }
+          </div>
+
+          <div class="entry-middle">
+            @if (entry.projectName) {
+              <span class="entry-project">{{ entry.projectName }}</span>
+            }
+            @if (entry.description) {
+              <span class="entry-description">{{ entry.description }}</span>
+            }
+            <span class="entry-user">{{ getUserName(entry.userId) }}</span>
+            @if (!entry.projectName && !entry.description) {
+              <span class="entry-no-desc">Sin descripción</span>
+            }
+          </div>
+
+          <div class="entry-times">
+            @if (entry.startTime) {
+              <span class="entry-time-range">{{ formatTime(entry.startTime) }}–{{ formatTime(entry.endTime) }}</span>
+            }
+          </div>
+
+          <div class="entry-duration">
+            @if (entry.status === 'RUNNING') {
+              <span class="running-label">En curso...</span>
+            } @else {
+              <span class="duration-value">{{ formatDuration(entry.durationMinutes) }}</span>
+            }
+          </div>
+
+          @if (entry.billable) {
+            <span class="billable-dot" title="Facturable">$</span>
+          }
+
+          <div class="entry-actions">
+            @if (canEdit() && entry.status !== 'RUNNING') {
+              <button class="action-btn" (click)="openEdit(entry)" title="Editar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+            }
+            @if (canDelete() && entry.status !== 'RUNNING') {
+              <button class="action-btn action-btn--danger" (click)="openDelete(entry)" title="Eliminar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/>
+                </svg>
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    @if ((data()?.totalPages ?? 0) > 1) {
+      <div class="pagination">
+        <button class="page-btn" [disabled]="currentPage() === 0" (click)="goToPage(currentPage() - 1)">←</button>
+        @for (p of pages(); track p) {
+          <button class="page-btn" [class.active]="p === currentPage()" (click)="goToPage(p)">{{ p + 1 }}</button>
+        }
+        <button class="page-btn" [disabled]="currentPage() === (data()?.totalPages ?? 1) - 1" (click)="goToPage(currentPage() + 1)">→</button>
+      </div>
+    }
+  }
+}
+
+<!-- ── Modal Entrada Manual ───────────────────────────────────────── -->
+<app-modal
+  [open]="showModal()"
+  [title]="modalMode() === 'create' ? 'Nueva entrada de tiempo' : 'Editar entrada'"
+  size="md"
+  (closed)="showModal.set(false)"
+>
+  @if (modalError()) {
+    <div class="modal-error">{{ modalError() }}</div>
+  }
+
+  <div class="modal-section">
+    <div class="modal-section-label">Entrada</div>
+    <div class="modal-section-fields">
+      <div class="field-row">
+        <app-input label="Fecha *" type="date" [value]="fDate()" (valueChange)="fDate.set($event)" />
+        <app-select label="Proyecto" [options]="projectOptions()" [value]="fProjectId()" (valueChange)="fProjectId.set($event)" />
+      </div>
+      <app-input label="Descripción" [value]="fDescription()" (valueChange)="fDescription.set($event)" placeholder="¿En qué trabajaste?" />
+    </div>
+  </div>
+
+  <div class="modal-divider"></div>
+
+  <div class="modal-section">
+    <div class="modal-section-label">Horario</div>
+    <div class="modal-section-fields">
+      <div class="field-row">
+        <app-input label="Hora inicio" type="time" [value]="fStartTime()" (valueChange)="fStartTime.set($event)" />
+        <app-input label="Hora fin" type="time" [value]="fEndTime()" (valueChange)="fEndTime.set($event)" />
+      </div>
+      <app-input label="Duración (min)" type="number" [value]="fDurationMinutes()" (valueChange)="fDurationMinutes.set($event)" placeholder="Ej: 90" />
+      <p class="field-hint">Si indicas hora de inicio y fin, la duración se calculará automáticamente en el servidor.</p>
+    </div>
+  </div>
+
+  <div footer class="modal-footer">
+    <app-button variant="ghost" (clicked)="showModal.set(false)">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving()" (clicked)="save()">
+      {{ modalMode() === 'create' ? 'Añadir entrada' : 'Guardar cambios' }}
+    </app-button>
+  </div>
+</app-modal>
+
+<!-- ── Modal Eliminar ─────────────────────────────────────────────── -->
+<app-modal [open]="showDeleteModal()" title="Eliminar entrada" size="sm" (closed)="showDeleteModal.set(false)">
+  <p class="delete-confirm-text">¿Eliminar esta entrada de tiempo? Esta acción no se puede deshacer.</p>
+  <div footer class="modal-footer">
+    <app-button variant="ghost" (clicked)="showDeleteModal.set(false)">Cancelar</app-button>
+    <app-button variant="danger" [loading]="deleting()" (clicked)="confirmDelete()">Eliminar</app-button>
+  </div>
+</app-modal>

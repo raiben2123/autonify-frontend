@@ -1,0 +1,461 @@
+@if (loading() && quotes().length === 0) {
+  <app-spinner [fullPage]="false" size="lg" />
+}
+
+@if (error()) {
+  <div class="bg-danger/10 border border-danger/30 rounded-lg p-4 text-sm text-danger">
+    {{ error() }}
+  </div>
+}
+
+@if (!loading() || quotes().length > 0) {
+
+  <!-- Cabecera -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Presupuestos</h1>
+      <p class="page-subtitle">{{ totalElements() }} registro{{ totalElements() !== 1 ? 's' : '' }}</p>
+    </div>
+    <button class="btn btn-primary" (click)="openCreate()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nuevo presupuesto
+    </button>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="page-toolbar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" [value]="searchQuery()" (input)="onSearch($any($event.target).value)" placeholder="Buscar por número o título…" />
+    </div>
+    <div class="filter-tabs">
+      @for (opt of statusOptions; track opt.value) {
+        <button class="filter-tab" [class.active]="statusFilter() === opt.value" (click)="onStatusFilter(opt.value)">
+          {{ opt.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  @if (quotes().length === 0 && !loading()) {
+    <app-empty-state title="Sin presupuestos aún" subtitle="Crea tu primer presupuesto para empezar" />
+  } @else {
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Número</th>
+            <th>Cliente</th>
+            <th>Título</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+            <th>Válido hasta</th>
+            <th class="text-right">Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (q of quotes(); track q.id) {
+            <tr (click)="openDetail(q)">
+              <td class="mono font-semibold">{{ q.number }}</td>
+              <td>
+                <div class="quote-client">
+                  <span class="client-avatar-sm">{{ q.clientName[0] }}</span>
+                  {{ q.clientName }}
+                </div>
+              </td>
+              <td class="text-secondary">{{ q.title || '—' }}</td>
+              <td><app-badge [label]="statusLabel(q.status)" [variant]="statusVariant(q.status)" [dot]="true" /></td>
+              <td class="mono">{{ formatDate(q.issueDate) }}</td>
+              <td class="mono" [class.text-danger]="q.status === 'SENT' && isExpired(q.validUntil)">
+                {{ formatDate(q.validUntil) }}
+              </td>
+              <td class="text-right font-semibold mono">{{ formatCurrency(q.total) }}</td>
+              <td (click)="$event.stopPropagation()">
+                <div class="row-actions">
+                  @if (canEdit(q.status)) {
+                    <button class="btn btn-ghost" title="Editar" (click)="openEdit(q)">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                  }
+                  <button class="btn btn-ghost" title="Descargar PDF" (click)="downloadPdf(q)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </button>
+                  @if (canEdit(q.status)) {
+                    <button class="btn btn-ghost" style="color:var(--color-danger)" title="Eliminar" (click)="openDelete(q)">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages() > 1) {
+      <div class="pagination">
+        <button class="page-btn" [disabled]="currentPage() === 0" (click)="goToPage(currentPage() - 1)">←</button>
+        @for (p of pages; track p) {
+          <button class="page-btn" [class.active]="p === currentPage()" (click)="goToPage(p)">{{ p + 1 }}</button>
+        }
+        <button class="page-btn" [disabled]="currentPage() === totalPages() - 1" (click)="goToPage(currentPage() + 1)">→</button>
+      </div>
+    }
+  }
+}
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  MODAL CREAR / EDITAR                                   -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<app-modal [open]="showModal()" [title]="modalTitle()" size="xl" (closed)="closeModal()">
+  @if (modalError()) { <div class="error-banner">{{ modalError() }}</div> }
+
+  <div class="form-grid">
+    <div class="form-field full">
+      <label class="field-label">Cliente *</label>
+      <select class="field-select" [value]="form().clientId" (change)="patchForm('clientId', $any($event.target).value)">
+        <option value="">Selecciona un cliente…</option>
+        @for (c of clients(); track c.id) {
+          <option [value]="c.id">{{ c.name }}@if (c.nif) { · {{ c.nif }} }</option>
+        }
+      </select>
+    </div>
+
+    <div class="form-field full">
+      <label class="field-label">Título / Asunto</label>
+      <input class="field-input" placeholder="Ej: Desarrollo web para proyecto X"
+        [value]="form().title" (input)="patchForm('title', $any($event.target).value)" />
+    </div>
+
+    <div class="form-field">
+      <label class="field-label">Serie</label>
+      <select class="field-select" [value]="form().seriesId" (change)="patchForm('seriesId', $any($event.target).value)">
+        <option value="">Serie por defecto</option>
+        @for (s of series(); track s.id) {
+          <option [value]="s.id">{{ s.name }} ({{ s.prefix }})</option>
+        }
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label class="field-label">Fecha de emisión *</label>
+      <input class="field-input" type="date" [value]="form().issueDate"
+        (input)="patchForm('issueDate', $any($event.target).value)" />
+    </div>
+
+    <div class="form-field no-bottom">
+      <label class="field-label">Válido hasta *</label>
+      <input class="field-input" type="date" [value]="form().validUntil"
+        (input)="patchForm('validUntil', $any($event.target).value)" />
+    </div>
+  </div>
+
+  <!-- ── Líneas ── -->
+  <div class="lines-section">
+    <div class="lines-header">
+      <span class="lines-title">Líneas del presupuesto</span>
+      <div class="lines-actions">
+        <!-- Botón catálogo -->
+        <button class="btn btn-ghost btn-sm catalog-btn" type="button" (click)="openCatalog()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="7" height="7"/><rect x="15" y="3" width="7" height="7"/>
+            <rect x="15" y="15" width="7" height="7"/><rect x="2" y="15" width="7" height="7"/>
+          </svg>
+          Del catálogo
+        </button>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="addLine()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Línea vacía
+        </button>
+      </div>
+    </div>
+
+    <div class="lines-table-wrapper">
+      <table class="lines-table">
+        <thead>
+          <tr>
+            <th>Descripción</th>
+            <th class="col-num">Cantidad</th>
+            <th class="col-num">Precio u.</th>
+            <th class="col-num">Dto. %</th>
+            <th class="col-num">IVA %</th>
+            <th class="col-num">Subtotal</th>
+            <th class="col-num">Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (line of lines(); track $index; let i = $index) {
+            <tr>
+              <td>
+                <input class="line-input" placeholder="Descripción del servicio…"
+                  [value]="line.description"
+                  (input)="patchLine(i, 'description', $any($event.target).value)" />
+              </td>
+              <td>
+                <input class="line-input text-right" type="number" min="0.01" step="0.01"
+                  [value]="line.quantity" (input)="patchLine(i, 'quantity', $any($event.target).value)" />
+              </td>
+              <td>
+                <input class="line-input text-right" type="number" min="0" step="0.01"
+                  [value]="line.unitPrice" (input)="patchLine(i, 'unitPrice', $any($event.target).value)" />
+              </td>
+              <td>
+                <input class="line-input text-right" type="number" min="0" max="100" step="1"
+                  [value]="line.discountPercentage"
+                  (input)="patchLine(i, 'discountPercentage', $any($event.target).value)" />
+              </td>
+              <td>
+                <select class="line-select" [value]="line.taxRate"
+                  (change)="patchLine(i, 'taxRate', $any($event.target).value)">
+                  @for (t of taxRates; track t) { <option [value]="t">{{ t }}%</option> }
+                </select>
+              </td>
+              <td class="text-right mono text-secondary">
+                {{ formatCurrency(lineSubtotals()[$index]?.subtotal ?? 0) }}
+              </td>
+              <td class="text-right mono font-semibold">
+                {{ formatCurrency(lineSubtotals()[$index]?.total ?? 0) }}
+              </td>
+              <td>
+                <button class="btn btn-ghost btn-icon text-danger"
+                  [disabled]="lines().length <= 1" (click)="removeLine(i)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="lines-totals">
+      <div class="total-row"><span>Base imponible</span><span class="mono">{{ formatCurrency(formTotals().subtotal) }}</span></div>
+      <div class="total-row"><span>IVA</span><span class="mono">{{ formatCurrency(formTotals().taxAmount) }}</span></div>
+      <div class="total-row total-final"><span>Total</span><span class="mono">{{ formatCurrency(formTotals().total) }}</span></div>
+    </div>
+  </div>
+
+  <div class="form-grid form-grid-bottom">
+    <div class="form-field full">
+      <label class="field-label">Notas</label>
+      <textarea class="field-textarea" rows="2" placeholder="Notas visibles en el presupuesto…"
+        [value]="form().notes" (input)="patchForm('notes', $any($event.target).value)"></textarea>
+    </div>
+    <div class="form-field full no-bottom">
+      <label class="field-label">Condiciones</label>
+      <textarea class="field-textarea" rows="2" placeholder="Condiciones generales, formas de pago…"
+        [value]="form().terms" (input)="patchForm('terms', $any($event.target).value)"></textarea>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" [disabled]="modalLoading()" (click)="save()">
+      {{ modalLoading() ? 'Guardando…' : (isEditing() ? 'Guardar cambios' : 'Crear presupuesto') }}
+    </button>
+  </div>
+</app-modal>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  MODAL CATÁLOGO                                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<app-modal [open]="showCatalogModal()" title="Añadir del catálogo" size="lg" (closed)="closeCatalog()">
+  <div class="catalog-search-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" [value]="catalogSearch()"
+      (input)="onCatalogSearch($any($event.target).value)"
+      placeholder="Buscar producto o servicio…"
+      autofocus />
+  </div>
+
+  @if (catalogLoading()) {
+    <app-spinner [fullPage]="false" size="md" />
+  } @else if (catalogItems().length === 0) {
+    <div class="catalog-empty">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".3"><rect x="2" y="3" width="7" height="7"/><rect x="15" y="3" width="7" height="7"/><rect x="15" y="15" width="7" height="7"/><rect x="2" y="15" width="7" height="7"/></svg>
+      <p>{{ catalogSearch() ? 'Sin resultados para "' + catalogSearch() + '"' : 'No hay ítems en el catálogo' }}</p>
+    </div>
+  } @else {
+    <div class="catalog-list">
+      @for (item of catalogItems(); track item.id) {
+        <button class="catalog-item-row" type="button" (click)="addCatalogItem(item)">
+          <div class="catalog-item-icon" [class.is-service]="item.itemType === 'SERVICE'">
+            @if (item.itemType === 'SERVICE') {
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            } @else {
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            }
+          </div>
+          <div class="catalog-item-info">
+            <div class="catalog-item-name">{{ item.name }}</div>
+            @if (item.description) {
+              <div class="catalog-item-desc">{{ item.description }}</div>
+            }
+            @if (item.categoryName) {
+              <div class="catalog-item-cat">{{ item.categoryName }}</div>
+            }
+          </div>
+          <div class="catalog-item-price">
+            <span class="price-amount">{{ formatCurrency(item.unitPrice) }}</span>
+            @if (item.taxRate) { <span class="price-tax">+ {{ item.taxRate }}% IVA</span> }
+            @if (item.unit) { <span class="price-unit">/ {{ item.unit }}</span> }
+          </div>
+          <div class="catalog-item-add">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+        </button>
+      }
+    </div>
+  }
+
+  <div class="modal-footer" style="margin-top:12px">
+    <button class="btn btn-secondary" (click)="closeCatalog()">Cancelar</button>
+  </div>
+</app-modal>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  MODAL DETALLE                                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<app-modal [open]="showDetail()" [title]="detailQuote()?.number ?? 'Presupuesto'" size="xl" (closed)="closeDetail()">
+  @if (detailLoading()) { <app-spinner [fullPage]="false" size="md" /> }
+  @if (detailQuote(); as q) {
+    <div class="detail-header">
+      <div class="detail-header-left">
+        <div class="detail-number">{{ q.number }}</div>
+        @if (q.title) { <div class="detail-title">{{ q.title }}</div> }
+        <app-badge [label]="statusLabel(q.status)" [variant]="statusVariant(q.status)" [dot]="true" />
+      </div>
+      <div class="detail-header-right">
+        <div class="detail-amount">{{ formatCurrency(q.total) }}</div>
+        <div class="detail-client">{{ q.clientName }}</div>
+        @if (q.clientEmail) { <div class="detail-email">{{ q.clientEmail }}</div> }
+      </div>
+    </div>
+
+    <div class="detail-dates">
+      <div class="date-item"><span class="date-label">Emisión</span><span class="date-value">{{ formatDate(q.issueDate) }}</span></div>
+      <div class="date-item">
+        <span class="date-label">Válido hasta</span>
+        <span class="date-value" [class.text-danger]="isExpired(q.validUntil) && q.status !== 'APPROVED' && q.status !== 'CONVERTED'">{{ formatDate(q.validUntil) }}</span>
+      </div>
+      @if (q.sentAt) { <div class="date-item"><span class="date-label">Enviado</span><span class="date-value">{{ formatDate(q.sentAt) }}</span></div> }
+      @if (q.approvedAt) { <div class="date-item"><span class="date-label">Aprobado</span><span class="date-value">{{ formatDate(q.approvedAt) }}</span></div> }
+      @if (q.convertedToInvoiceNumber) {
+        <div class="date-item converted-badge">
+          <span class="date-label">Factura generada</span>
+          <span class="date-value">{{ q.convertedToInvoiceNumber }}</span>
+        </div>
+      }
+    </div>
+
+    @if (q.lines && q.lines.length > 0) {
+      <div class="detail-lines">
+        <table class="detail-lines-table">
+          <thead>
+            <tr>
+              <th>Descripción</th>
+              <th class="col-num">Cant.</th>
+              <th class="col-num">Precio</th>
+              <th class="col-num">Dto.</th>
+              <th class="col-num">IVA</th>
+              <th class="col-num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of q.lines; track l.id) {
+              <tr>
+                <td>{{ l.description }}</td>
+                <td class="col-num mono">{{ l.quantity }}</td>
+                <td class="col-num mono">{{ formatCurrency(l.unitPrice) }}</td>
+                <td class="col-num mono">{{ l.discountPercentage ? l.discountPercentage + '%' : '—' }}</td>
+                <td class="col-num mono">{{ l.taxRate }}%</td>
+                <td class="col-num mono font-semibold">{{ formatCurrency(l.total) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="detail-totals">
+        <div class="total-row"><span>Base imponible</span><span class="mono">{{ formatCurrency(q.subtotal) }}</span></div>
+        <div class="total-row"><span>IVA</span><span class="mono">{{ formatCurrency(q.taxAmount) }}</span></div>
+        <div class="total-row total-final"><span>Total</span><span class="mono">{{ formatCurrency(q.total) }}</span></div>
+      </div>
+    }
+
+    @if (q.notes || q.terms || q.rejectionReason) {
+      <div class="detail-notes-grid">
+        @if (q.notes) { <div class="detail-note-card"><div class="note-label">Notas</div><p>{{ q.notes }}</p></div> }
+        @if (q.terms) { <div class="detail-note-card"><div class="note-label">Condiciones</div><p>{{ q.terms }}</p></div> }
+        @if (q.rejectionReason) { <div class="detail-note-card rejection"><div class="note-label">Motivo de rechazo</div><p>{{ q.rejectionReason }}</p></div> }
+      </div>
+    }
+
+    <div class="modal-footer">
+      @if (canEdit(q.status)) { <button class="btn btn-danger" (click)="openDelete(q)">Eliminar</button> }
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost btn-sm" (click)="downloadPdf(q)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        PDF
+      </button>
+      <button class="btn btn-secondary" (click)="closeDetail()">Cerrar</button>
+      @if (canEdit(q.status)) {
+        <button class="btn btn-secondary" (click)="openEdit(q)">Editar</button>
+        <button class="btn btn-primary" (click)="sendQuote(q)">Enviar</button>
+      }
+      @if (canApproveReject(q.status)) {
+        <button class="btn btn-danger" (click)="openReject(q)">Rechazar</button>
+        <button class="btn btn-success" (click)="approveQuote(q)">Aprobar</button>
+      }
+      @if (canConvert(q.status)) {
+        <button class="btn btn-primary" (click)="convertQuote(q)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Convertir a factura
+        </button>
+      }
+    </div>
+  }
+</app-modal>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  MODAL RECHAZAR                                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<app-modal [open]="showRejectModal()" title="Rechazar presupuesto" size="sm" (closed)="closeReject()">
+  <p style="font-size:0.875rem;color:var(--color-text-2);margin-bottom:12px">
+    ¿Deseas rechazar el presupuesto <strong>{{ rejectingQuote()?.number }}</strong>?
+  </p>
+  <div class="form-field" style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:4px">
+    <label class="field-label">Motivo (opcional)</label>
+    <textarea class="field-textarea" rows="3" placeholder="Motivo del rechazo…"
+      [value]="rejectReason()" (input)="rejectReason.set($any($event.target).value)"></textarea>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="closeReject()">Cancelar</button>
+    <button class="btn btn-danger" [disabled]="rejectLoading()" (click)="confirmReject()">
+      {{ rejectLoading() ? 'Rechazando…' : 'Sí, rechazar' }}
+    </button>
+  </div>
+</app-modal>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  MODAL BORRAR                                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<app-modal [open]="showDeleteModal()" title="Eliminar presupuesto" size="sm" (closed)="closeDelete()">
+  <p style="font-size:0.875rem;color:var(--color-text-2);margin-bottom:4px">Estás a punto de eliminar permanentemente</p>
+  <p style="font-size:1rem;font-weight:700;color:var(--color-text);margin-bottom:16px;letter-spacing:-0.01em">{{ deletingQuote()?.number }}</p>
+  <p style="font-size:0.8125rem;color:var(--color-text-3)">Esta acción no se puede deshacer.</p>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="closeDelete()">Cancelar</button>
+    <button class="btn btn-danger" [disabled]="deleteLoading()" (click)="confirmDelete()">
+      {{ deleteLoading() ? 'Eliminando…' : 'Sí, eliminar' }}
+    </button>
+  </div>
+</app-modal>
